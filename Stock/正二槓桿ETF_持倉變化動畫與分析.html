@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>正二槓桿 ETF：每日再平衡的持倉變化、數學與「追高殺低」本質</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f4f3ef; --surface:#fcfcfb; --surface-2:#f0efea;
+  --text:#0b0b0b; --text-2:#52514e; --muted:#8a8984;
+  --grid:#e6e5e0; --axis:#c9c8c2; --border:#dcdbd6;
+  --idx:#2a78d6; --lev:#eb6834; --naive:#8a8984; --fix:#1baf7a;
+  --up:#e34948; --down:#008300;
+  --up-soft:rgba(227,73,72,.16); --down-soft:rgba(0,131,0,.14);
+  --accent-soft:#fdf0ea;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    color-scheme: dark;
+    --bg:#121211; --surface:#1a1a19; --surface-2:#232321;
+    --text:#f0efec; --text-2:#c3c2b7; --muted:#8f8e86;
+    --grid:#2c2c2a; --axis:#46453f; --border:#3a3936;
+    --idx:#3987e5; --lev:#d95926; --naive:#8f8e86; --fix:#199e70;
+    --up:#e66767; --down:#0ca30c;
+    --up-soft:rgba(230,103,103,.18); --down-soft:rgba(12,163,12,.18);
+    --accent-soft:#2a1d17;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:"Noto Sans TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;
+  line-height:1.75;font-size:16px}
+.wrap{max-width:1040px;margin:0 auto;padding:32px 20px 80px}
+h1{font-size:1.9rem;line-height:1.35;margin:0 0 .4rem}
+h2{font-size:1.4rem;margin:3rem 0 .6rem;padding-top:.4rem;border-top:1px solid var(--border)}
+h3{font-size:1.12rem;margin:1.8rem 0 .4rem}
+p{margin:.5rem 0}
+.sub{color:var(--text-2);margin:0 0 1.2rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin:14px 0}
+.hero{display:grid;grid-template-columns:1.2fr 1fr;gap:18px;align-items:center}
+.hero .big{font-size:1.5rem;font-weight:700;line-height:1.5}
+.hero .big .hl{background:var(--accent-soft);padding:0 .25em;border-radius:4px;white-space:nowrap}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0;padding:0;list-style:none}
+.toc a{display:inline-block;padding:4px 12px;border:1px solid var(--border);border-radius:999px;color:var(--text-2);text-decoration:none;font-size:.9rem;background:var(--surface)}
+.toc a:hover{color:var(--text);border-color:var(--text-2)}
+.eq{font-family:"Cambria Math","Times New Roman",serif;font-size:1.12rem;background:var(--surface-2);
+  border-left:3px solid var(--lev);padding:10px 14px;margin:10px 0;border-radius:0 8px 8px 0;overflow-x:auto;white-space:nowrap}
+.eq .c{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;font-size:.88rem;color:var(--text-2);margin-left:1em}
+.note{color:var(--text-2);font-size:.92rem}
+.warn{border-left:3px solid var(--up);background:var(--up-soft);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0}
+.key{border-left:3px solid var(--idx);background:var(--surface-2);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0}
+table{border-collapse:collapse;width:100%;font-size:.93rem;margin:8px 0}
+th,td{padding:7px 10px;border-bottom:1px solid var(--grid);text-align:right;font-variant-numeric:tabular-nums}
+th{color:var(--text-2);font-weight:600;border-bottom:1px solid var(--axis)}
+th:first-child,td:first-child{text-align:left}
+td.l,th.l{text-align:left}
+.upc{color:var(--up);font-weight:600}
+.dnc{color:var(--down);font-weight:600}
+.mut{color:var(--muted)}
+
+/* simulator */
+.sim{display:grid;grid-template-columns:1.15fr 1fr;gap:18px}
+.sim svg{width:100%;height:auto;display:block}
+.controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin:4px 0 12px}
+.controls label{font-size:.9rem;color:var(--text-2);display:flex;align-items:center;gap:8px}
+input[type=range]{width:150px;accent-color:var(--lev)}
+select{font:inherit;font-size:.9rem;padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text)}
+button{font:inherit;font-size:.92rem;padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer}
+button:hover{border-color:var(--text-2)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.up{border-color:var(--up);color:var(--up)}
+button.dn{border-color:var(--down);color:var(--down)}
+button.primary{background:var(--lev);border-color:var(--lev);color:#fff}
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:.95rem;align-content:start}
+.readout dt{color:var(--text-2)}
+.readout dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.phase{grid-column:1/-1;margin-top:6px;padding:8px 12px;border-radius:8px;background:var(--surface-2);font-size:.92rem;min-height:2.6em}
+.formula{grid-column:1/-1;font-family:"Cambria Math","Times New Roman",serif;font-size:1rem;padding:8px 12px;border:1px dashed var(--border);border-radius:8px;margin-top:4px}
+.lev-gauge{grid-column:1/-1;margin-top:6px}
+.lev-track{position:relative;height:12px;border-radius:6px;background:var(--surface-2);border:1px solid var(--border)}
+.lev-mid{position:absolute;left:50%;top:-4px;bottom:-4px;width:2px;background:var(--text-2)}
+.lev-dot{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;background:var(--lev);border:2px solid var(--surface);transform:translate(-50%,-50%)}
+.lev-lbl{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted)}
+
+/* charts */
+.chart{position:relative}
+.chart svg{width:100%;height:auto;display:block;overflow:visible}
+.chart .grid{stroke:var(--grid);stroke-width:1}
+.chart .base{stroke:var(--axis);stroke-width:1}
+.chart .tick{fill:var(--muted);font-size:11px;font-family:inherit}
+.chart .xhair{stroke:var(--text-2);stroke-width:1;stroke-dasharray:3 3}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.88rem;color:var(--text-2);margin:2px 0 4px}
+.legend i{display:inline-block;width:18px;height:0;border-top:2px solid;vertical-align:middle;margin-right:6px}
+.legend i.dash{border-top-style:dashed}
+.legend .tri{font-style:normal;margin-right:4px}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:8px 10px;font-size:.82rem;line-height:1.5;box-shadow:0 4px 14px rgba(0,0,0,.12);min-width:150px;z-index:5;white-space:nowrap}
+.tip b{font-weight:600}
+.tip .row{display:flex;justify-content:space-between;gap:14px}
+.tip .sw{display:inline-block;width:10px;height:2px;vertical-align:middle;margin-right:6px}
+.chart-title{font-weight:600;margin:14px 0 0}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:10px 0}
+.stat{background:var(--surface-2);border-radius:10px;padding:10px 12px}
+.stat .k{font-size:.8rem;color:var(--text-2)}
+.stat .v{font-size:1.3rem;font-weight:700;font-variant-numeric:tabular-nums}
+details summary{cursor:pointer;color:var(--text-2);font-size:.92rem}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}
+.presets button{font-size:.85rem;padding:4px 12px;border-radius:999px}
+#cmpHeat svg{width:100%;height:auto;display:block}
+#cmpHeat .cell{stroke:var(--surface);stroke-width:2}
+#cmpHeat .cell.cur{stroke:var(--text);stroke-width:2.5}
+#cmpHeat text{font-family:inherit}
+.bs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 18px;margin-bottom:8px}
+.bs-grid label{display:flex;flex-direction:column;gap:2px;font-size:.86rem;color:var(--text-2)}
+.bs-grid label span{display:flex;justify-content:space-between}
+.bs-grid input[type=range]{width:100%}
+.wf td.bar{width:38%;padding:4px 10px}
+.wf .track{position:relative;height:14px}
+.wf .track .mid{position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--axis)}
+.wf .track .b{position:absolute;top:0;height:14px;border-radius:3px}
+@media (max-width:820px){.bs-grid{grid-template-columns:1fr}}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:820px){.sim,.hero,.two{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+@media print{*{print-color-adjust:exact !important;-webkit-print-color-adjust:exact !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div style="font-size:.88rem;color:var(--text-2);margin-bottom:10px">系列：<b>正二槓桿 ETF</b>｜<a style="color:var(--idx)" href="指數套利_期現貨套利動畫與分析.html">指數套利</a>｜<a style="color:var(--idx)" href="ETF套利_空ETF加申購creation動畫與分析.html">ETF 套利（空 ETF＋申購）</a></div>
+
+<h1>正二槓桿 ETF：漲跌時持倉怎麼變？<br>為什麼它本質上是「追高殺低」</h1>
+<p class="sub">以「每日追蹤 2 倍報酬」的槓桿 ETF（例：台灣的 00631L 元大台灣50正2）為對象，用動畫、數學推導與情境實驗拆解其每日再平衡機制。數字皆為教學用假設值，非投資建議。</p>
+
+<div class="card hero">
+  <div>
+    <div class="big">每天收盤要補的部位 ＝ <span class="hl">2 × 指數漲跌幅 × 淨值</span></div>
+    <p>指數<b class="upc">漲 ▲</b>，基金必須<b class="upc">再買進</b>；指數<b class="dnc">跌 ▼</b>，基金必須<b class="dnc">再賣出</b>。<br>
+    調整方向永遠跟著當天的漲跌走，這就是機械式的「追高殺低」。</p>
+  </div>
+  <div class="note">
+    淨值 100、曝險 200 時：<br>
+    指數 +5% → 淨值 110、曝險 210、目標 220 → <b class="upc">買進 10</b><br>
+    指數 −5% → 淨值 90、曝險 190、目標 180 → <b class="dnc">賣出 10</b>
+  </div>
+</div>
+
+<ul class="toc">
+  <li><a href="#sim">① 持倉動畫</a></li>
+  <li><a href="#math">② 數學推導</a></li>
+  <li><a href="#two-day">③ 兩天就看懂的耗損</a></li>
+  <li><a href="#lab">④ 蒙地卡羅實驗室</a></li>
+  <li><a href="#compare">⑤ 不用正二的差異</a></li>
+  <li><a href="#basis">⑥ 期貨價差與除權息</a></li>
+  <li><a href="#why">⑦ 為什麼本質是追高殺低</a></li>
+  <li><a href="#take">⑧ 結論與實務意涵</a></li>
+</ul>
+
+<!-- ============ 1. SIMULATOR ============ -->
+<h2 id="sim">① 持倉動畫：一天之內發生什麼事</h2>
+<p>每按一次，就模擬一個交易日，分三段播放：<b>① 指數變動</b>（部位跟著漲跌）→ <b>② 槓桿偏離 2 倍</b>（算出缺口）→ <b>③ 收盤再平衡</b>（買進或賣出，把槓桿拉回 2.00×）。</p>
+
+<div class="card">
+  <div class="controls">
+    <label>每日幅度 <input type="range" id="amp" min="0.5" max="10" step="0.5" value="5"> <b id="ampv">5.0%</b></label>
+    <button class="up" id="btnUp">▲ 指數上漲</button>
+    <button class="dn" id="btnDn">▼ 指數下跌</button>
+    <span style="flex:1"></span>
+    <label>自動播放
+      <select id="mode">
+        <option value="random">隨機漫步</option>
+        <option value="chop">來回震盪（漲跌交替）</option>
+        <option value="up">上漲趨勢</option>
+        <option value="down">下跌趨勢</option>
+      </select>
+    </label>
+    <label>速度 <select id="speed"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select></label>
+    <button class="primary" id="btnPlay">▶ 播放</button>
+    <button id="btnReset">重置</button>
+  </div>
+
+  <div class="sim">
+    <svg id="bars" viewBox="0 0 520 320" role="img" aria-label="淨值與曝險長條動畫">
+      <defs>
+        <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="7" height="7" fill="var(--lev)" opacity=".35"/>
+          <line x1="0" y1="0" x2="0" y2="7" stroke="var(--lev)" stroke-width="3"/>
+        </pattern>
+      </defs>
+      <line x1="30" x2="500" y1="270" y2="270" stroke="var(--axis)"/>
+      <!-- NAV bar -->
+      <rect id="bNav" x="60" width="110" rx="4" fill="var(--idx)"/>
+      <text id="tNav" x="115" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text)"></text>
+      <text x="115" y="292" text-anchor="middle" font-size="13" fill="var(--text-2)">淨值</text>
+      <text x="115" y="310" text-anchor="middle" font-size="11" fill="var(--muted)">投資人的錢</text>
+      <!-- exposure bar: own part + borrowed part -->
+      <rect id="bOwn" x="260" width="130" fill="var(--lev)"/>
+      <rect id="bBor" x="260" width="130" fill="url(#hatch)"/>
+      <rect id="bGap" x="260" width="130" fill="var(--up-soft)" stroke="var(--up)" stroke-dasharray="4 3" opacity="0"/>
+      <line id="lTgt" x1="236" x2="414" stroke="var(--text)" stroke-width="2" stroke-dasharray="6 4"/>
+      <text id="tTgt" x="420" font-size="12" fill="var(--text-2)">目標 = 2 × 淨值</text>
+      <text id="tExp" x="325" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text)"></text>
+      <text id="tGap" x="325" text-anchor="middle" font-size="14" font-weight="700" opacity="0"></text>
+      <text x="325" y="292" text-anchor="middle" font-size="13" fill="var(--text-2)">曝險（持有的指數部位）</text>
+      <text x="325" y="310" text-anchor="middle" font-size="11" fill="var(--muted)">實心＝自有資金　斜線＝槓桿（借來的）</text>
+    </svg>
+
+    <dl class="readout">
+      <dt>交易日</dt><dd id="rdDay">第 0 天</dd>
+      <dt>指數</dt><dd id="rdIdx">100.00</dd>
+      <dt>今日指數漲跌 r</dt><dd id="rdR">—</dd>
+      <dt>淨值 N</dt><dd id="rdNav">100.00</dd>
+      <dt>曝險 E（調整前）</dt><dd id="rdExp">200.00</dd>
+      <dt>實際槓桿 E ÷ N</dt><dd id="rdLev">2.00×</dd>
+      <div class="lev-gauge">
+        <div class="lev-track"><div class="lev-mid"></div><div class="lev-dot" id="levDot" style="left:50%"></div></div>
+        <div class="lev-lbl"><span>1.80×（漲後偏低→要買）</span><span>2.00×</span><span>2.20×（跌後偏高→要賣）</span></div>
+      </div>
+      <dt>收盤再平衡</dt><dd id="rdTrade">—</dd>
+      <div class="formula" id="rdFormula">再平衡金額 ΔE = 2 × r × N</div>
+      <div class="phase" id="rdPhase">按「▲ 指數上漲」或「▼ 指數下跌」開始。</div>
+    </dl>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="k">指數累積報酬</div><div class="v" id="sIdx">0.00%</div></div>
+    <div class="stat"><div class="k">正二累積報酬</div><div class="v" id="sLev">0.00%</div></div>
+    <div class="stat"><div class="k">直覺的「2 × 指數報酬」</div><div class="v" id="sNaive">0.00%</div></div>
+    <div class="stat"><div class="k">正二 − 直覺（路徑效應）</div><div class="v" id="sGap">0.00%</div></div>
+  </div>
+
+  <div class="chart-title">指數走勢與每一次再平衡交易</div>
+  <div class="legend">
+    <span><i style="border-color:var(--idx)"></i>指數（起點 100）</span>
+    <span><b class="tri upc">▲</b>收盤買進（大小∝金額）</span>
+    <span><b class="tri dnc">▼</b>收盤賣出</span>
+  </div>
+  <div class="chart" id="chSimIdx"></div>
+
+  <div class="chart-title">正二淨值 vs 直覺的「2 × 指數累積報酬」</div>
+  <div class="legend">
+    <span><i style="border-color:var(--lev)"></i>正二淨值（每日 2 倍，逐日複利）</span>
+    <span><i class="dash" style="border-color:var(--naive)"></i>2 × 指數累積報酬（直覺，但不是正二的實際結果）</span>
+  </div>
+  <div class="chart" id="chSimNav"></div>
+
+  <details style="margin-top:10px">
+    <summary>交易紀錄（最近 15 天，資料表檢視）</summary>
+    <table id="logTbl"><thead><tr><th>天</th><th>指數漲跌</th><th>指數</th><th>淨值</th><th>調整前槓桿</th><th>再平衡</th></tr></thead><tbody></tbody></table>
+  </details>
+</div>
+
+<!-- ============ 2. MATH ============ -->
+<h2 id="math">② 數學推導：為什麼「漲了一定要買」</h2>
+<h3>2.1 一天的帳</h3>
+<p>設前一日收盤時：淨值 <i>N</i>，曝險 <i>E</i> = 2<i>N</i>（每 1 元淨值持有 2 元指數部位）。當天指數報酬為 <i>r</i>。</p>
+<div class="eq">部位損益 = E · r = 2N r</div>
+<div class="eq">新淨值 N′ = N + 2N r = N(1 + 2r)</div>
+<div class="eq">調整前曝險 E′ = 2N(1 + r)<span class="c">← 部位只跟著指數漲 r，不會自動變成 2 倍</span></div>
+<div class="eq">實際槓桿 = E′ ÷ N′ = 2(1 + r) ÷ (1 + 2r)<span class="c">← r＞0 時＜2；r＜0 時＞2</span></div>
+<div class="eq">再平衡 ΔE = 2N′ − E′ = 2N(1 + 2r) − 2N(1 + r) = <b>2 N r</b></div>
+<div class="key"><b>ΔE 與 r 同號。</b>指數漲（r＞0）→ ΔE＞0 → 必須買進；指數跌（r＜0）→ ΔE＜0 → 必須賣出。這不是經理人的判斷，而是「維持固定 2 倍」這個承諾逼出來的數學結果。</div>
+<p>為什麼漲了槓桿會<b>變低</b>？因為賺到的錢全部進了淨值（分母漲 2r），但部位只漲了 r（分子漲 r）。分母長得比分子快，槓桿就掉到 2 以下，只好加碼補回來。跌的時候剛好相反。</p>
+
+<h3>2.2 推廣到任意槓桿 L</h3>
+<div class="eq">ΔE = L·N(1 + L r) − L·N(1 + r) = <b>L (L − 1) · N · r</b></div>
+<p>交易方向由 <b>L(L − 1)</b> 的正負號決定：</p>
+<table>
+  <thead><tr><th class="l">槓桿 L</th><th class="l">例子</th><th>係數 L(L−1)</th><th class="l">指數漲時</th><th class="l">性質</th></tr></thead>
+  <tbody>
+    <tr><td>3</td><td class="l">正三</td><td>6</td><td class="l upc">▲ 買進</td><td class="l">追高殺低（更猛）</td></tr>
+    <tr><td>2</td><td class="l">正二</td><td>2</td><td class="l upc">▲ 買進</td><td class="l">追高殺低</td></tr>
+    <tr><td>1</td><td class="l">原型 ETF</td><td>0</td><td class="l mut">不動</td><td class="l">不需再平衡</td></tr>
+    <tr><td>0.5</td><td class="l">股債各半（固定比例）</td><td>−0.25</td><td class="l dnc">▼ 賣出</td><td class="l">高賣低買（相反！）</td></tr>
+    <tr><td>−1</td><td class="l">反一</td><td>2</td><td class="l upc">▲ 回補空單（買）</td><td class="l">追高殺低</td></tr>
+    <tr><td>−2</td><td class="l">反二</td><td>6</td><td class="l upc">▲ 回補空單（買）</td><td class="l">追高殺低</td></tr>
+  </tbody>
+</table>
+<p class="note">只要 L＞1 或 L＜0，L(L−1) 就是正的，所以<b>正向槓桿和反向 ETF 都是追高殺低</b>，而且收盤時兩者的調整方向相同。反過來，只有 0＜L＜1（例如股債固定比例再平衡）才是「高賣低買」。</p>
+
+<h3>2.3 連續時間：波動耗損公式</h3>
+<p>假設指數遵循幾何布朗運動 dS/S = μ dt + σ dW，槓桿 ETF 每日維持 dV/V = L · dS/S（先忽略費用與融資成本）。用伊藤引理分別對 ln S 和 ln V 展開：</p>
+<div class="eq">d ln S = (μ − ½σ²) dt + σ dW</div>
+<div class="eq">d ln V = (Lμ − ½L²σ²) dt + Lσ dW</div>
+<p>把第二式減掉第一式的 L 倍，隨機項 dW 剛好消掉：</p>
+<div class="eq">V<sub>T</sub> ÷ V<sub>0</sub> = (S<sub>T</sub> ÷ S<sub>0</sub>)<sup>L</sup> · e<sup>−½ L(L−1) σ² T</sup></div>
+<div class="eq">正二（L = 2）：V<sub>T</sub> ÷ V<sub>0</sub> = (S<sub>T</sub> ÷ S<sub>0</sub>)² · e<sup>−σ² T</sup><span class="c">再乘上 e<sup>−(融資成本 + 內扣費用)·T</sup></span></div>
+<p>這條公式有兩個重點：</p>
+<ul>
+  <li><b>(S<sub>T</sub>/S<sub>0</sub>)²</b>：最後結果跟指數終點的<b>平方</b>有關，不是「2 倍報酬」。平方是凸函數，所以大趨勢時（不論漲跌）正二表現會比直覺的 2 倍好。</li>
+  <li><b>e<sup>−σ²T</sup></b>：只要有波動就會被扣血，而且扣的是<b>實現波動率的平方</b>。這就是「波動耗損」（volatility decay）。</li>
+</ul>
+<p>注意耗損係數 ½L(L−1) 跟 2.2 的再平衡係數 L(L−1) 是同一個東西。<b>追高殺低的強度，就是波動耗損的強度</b>，兩者是同一件事的兩面。</p>
+
+<table id="decayTbl">
+  <thead><tr><th class="l">指數年化波動 σ</th><th>一年後指數回到原點時，正二剩下</th><th>耗損</th><th>正三剩下</th></tr></thead>
+  <tbody></tbody>
+</table>
+<p class="note">依 e<sup>−σ²T</sup>（正二）與 e<sup>−3σ²T</sup>（正三）計算，T = 1 年，未計費用。</p>
+
+<h3>2.4 長期抱正二，什麼時候才贏過原型？</h3>
+<p>比較兩者的長期對數成長率（幾何報酬），r<sub>f</sub> 為融資成本：</p>
+<div class="eq">原型：g<sub>1</sub> = μ − ½σ²</div>
+<div class="eq">正二：g<sub>2</sub> = 2μ − r<sub>f</sub> − 2σ²</div>
+<div class="eq">g<sub>2</sub> − g<sub>1</sub> = (μ − r<sub>f</sub>) − 1.5 σ²<span class="c">→ 超額報酬＞1.5σ² 才划算</span></div>
+<p>例：指數年化波動 20%，1.5σ² = 6%。指數的<b>算術平均年報酬</b>（日報酬平均 × 250）要比融資成本高出 6% 以上，長期抱正二才會跑贏原型。同一套推導可得長期成長率最大的槓桿是 L* = (μ − r<sub>f</sub>) ÷ σ²（凱利槓桿）。波動越大，合理的槓桿越低。</p>
+
+<!-- ============ 3. TWO-DAY ============ -->
+<h2 id="two-day">③ 兩天就看懂：為什麼震盪會吃掉淨值</h2>
+<p>兩天的報酬分別為 r₁、r₂。正二兩天的報酬是 (1+2r₁)(1+2r₂) − 1，直覺的「2 × 指數兩天報酬」是 2[(1+r₁)(1+r₂) − 1]。兩者相減：</p>
+<div class="eq">正二 − 2 × 指數 = <b>2 · r₁ · r₂</b></div>
+<p>同方向（r₁r₂＞0）多賺，反方向（r₁r₂＜0）多賠。</p>
+<table>
+  <thead><tr><th class="l">兩天走勢</th><th>指數</th><th>2 × 指數（直覺）</th><th>正二實際</th><th>差距 2r₁r₂</th></tr></thead>
+  <tbody>
+    <tr><td class="l">▲ +10% 再 ▲ +10%</td><td>+21%</td><td>+42%</td><td class="upc">+44%</td><td class="upc">+2%</td></tr>
+    <tr><td class="l">▼ −10% 再 ▼ −10%</td><td>−19%</td><td>−38%</td><td>−36%</td><td class="upc">+2%（少賠）</td></tr>
+    <tr><td class="l">▲ +10% 再 ▼ −10%</td><td>−1%</td><td>−2%</td><td class="dnc">−4%</td><td class="dnc">−2%</td></tr>
+    <tr><td class="l">▼ −10% 再 ▲ +10%</td><td>−1%</td><td>−2%</td><td class="dnc">−4%</td><td class="dnc">−2%</td></tr>
+  </tbody>
+</table>
+<p>以第三列為例：第一天漲 10%，正二收盤<b>加碼買進</b>，把部位拉到 2.4 倍原始淨值的規模（淨值 120 × 2 = 240）；第二天跌 10%，加碼的那一塊就在高點被打下來，跌完又得<b>殺出</b>部位。買在高點、賣在低點，差額就是那 2%。</p>
+
+<!-- ============ 4. LAB (Monte Carlo) ============ -->
+<h2 id="lab">④ 蒙地卡羅實驗室：一次跑上千條路徑</h2>
+<p>單看一條路徑可能只是運氣好壞。這裡一次模擬上千條指數走勢，每天的報酬 = μ ÷ 250 ＋ σ ÷ √250 × 標準常態亂數。每條路徑同時計算<b>原型</b>（1 倍）和<b>正二</b>（每日 2 倍），然後看<b>整體分布</b>。為了聚焦在槓桿本身，這裡不計費用、資金成本與股息，那些見 ⑥。</p>
+<div class="card" id="mcCard">
+  <div class="controls">
+    <label>指數年化報酬 μ <input type="range" id="mcMu" min="-10" max="20" step="1" value="8"> <b id="mcMuV"></b></label>
+    <label>年化波動 σ <input type="range" id="mcSig" min="5" max="50" step="1" value="20"> <b id="mcSigV"></b></label>
+    <label>持有期間 <input type="range" id="mcY" min="0.25" max="10" step="0.25" value="3"> <b id="mcYV"></b></label>
+    <label>路徑數
+      <select id="mcP"><option value="300">300</option><option value="1000" selected>1,000</option><option value="3000">3,000</option></select>
+    </label>
+    <button id="mcSeedBtn">🎲 重新抽樣</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="k">正二 平均報酬</div><div class="v" id="mcS1">—</div><div class="note" id="mcS1s"></div></div>
+    <div class="stat"><div class="k">正二 中位數報酬</div><div class="v" id="mcS2">—</div><div class="note" id="mcS2s"></div></div>
+    <div class="stat"><div class="k">正二 贏過原型的機率</div><div class="v" id="mcS3">—</div><div class="note">比較同一條路徑的終點</div></div>
+    <div class="stat"><div class="k">正二 落後「2 × 指數報酬」的機率</div><div class="v" id="mcS4">—</div><div class="note">路徑效應為負的比例</div></div>
+  </div>
+
+  <div class="chart-title">淨值分布隨時間展開（對數刻度，起點 100）</div>
+  <div class="legend">
+    <span><i style="border-color:var(--idx)"></i>原型 中位數</span>
+    <span><i style="border-color:var(--lev)"></i>正二 中位數</span>
+    <span><span style="display:inline-block;width:18px;height:10px;background:var(--lev);opacity:.35;vertical-align:middle;margin-right:6px;border-radius:2px"></span>深色帶＝中間 50% 路徑（25～75 分位）</span>
+    <span><span style="display:inline-block;width:18px;height:10px;background:var(--lev);opacity:.14;vertical-align:middle;margin-right:6px;border-radius:2px"></span>淺色帶＝中間 90% 路徑（5～95 分位）</span>
+  </div>
+  <div class="chart" id="chMcFan"></div>
+
+  <div class="two">
+    <div>
+      <div class="chart-title">終點淨值分布（對數刻度）</div>
+      <div class="legend">
+        <span><i style="border-color:var(--idx)"></i>原型</span>
+        <span><i style="border-color:var(--lev)"></i>正二</span>
+        <span class="mut">縱軸＝路徑比例</span>
+      </div>
+      <div class="chart" id="chMcHist"></div>
+    </div>
+    <div>
+      <div class="chart-title">每條路徑：指數報酬 vs 正二報酬</div>
+      <div class="legend">
+        <span><b style="color:var(--lev)">●</b> 一條路徑</span>
+        <span><i class="dash" style="border-color:var(--naive)"></i>2 × 指數報酬（直覺）</span>
+        <span><i style="border-color:var(--text)"></i>公式 (1+R)²·e<sup>−σ²T</sup> − 1</span>
+      </div>
+      <div class="chart" id="chMcSc"></div>
+    </div>
+  </div>
+
+  <table id="mcTbl">
+    <thead><tr><th>指標（終點報酬）</th><th>原型</th><th>正二</th><th>2 × 指數報酬<br><span class="mut" style="font-weight:400">≈ 自己開 2 倍不調整</span></th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <p class="note" id="mcNote"></p>
+</div>
+<div class="key">
+<b>蒙地卡羅最重要的兩個觀察：</b>
+<ol style="margin:.3rem 0 0">
+  <li><b>平均是 2 倍，中位數不是。</b>正二的期望值約 e<sup>2μT</sup>，跟「2 倍」相符；但中位數約 e<sup>(2μ − 2σ²)T</sup>，被波動耗損往下拉。平均值是被少數大漲路徑拉高的，<b>大多數人拿到的是中位數附近的結果</b>。正二的報酬是右偏分布：少數路徑極好，多數路徑普通甚至落後。</li>
+  <li><b>散佈圖的點會貼著公式曲線，而不是貼著 2 倍直線。</b>指數報酬接近 0 時，點落在直線下方（震盪耗損）；指數大漲或大跌時，點落在直線上方（趨勢加成與自動減碼）。這就是 ② 的 (S<sub>T</sub>/S<sub>0</sub>)²·e<sup>−σ²T</sup> 用上千條路徑驗證的樣子。</li>
+</ol>
+</div>
+
+<!-- ============ 5. COMPARE ============ -->
+<h2 id="compare">⑤ 不用正二會怎樣？同一個終點，三種做法</h2>
+<p>想要 2 倍曝險，不一定要買正二。最直接的替代做法是<b>自己一次開 2 倍部位，之後不再調整</b>，例如一半自有資金加一半借款買原型 ETF，或用期貨開等值 2 倍的部位。兩者唯一的差別是<b>之後要不要每天把槓桿調回 2 倍</b>。</p>
+<table>
+  <thead><tr><th class="l">做法</th><th class="l">槓桿怎麼維持</th><th class="l">N 天後的報酬取決於</th></tr></thead>
+  <tbody>
+    <tr><td class="l"><span style="color:var(--idx)">━</span> 原型 ETF</td><td class="l">固定 1 倍</td><td class="l">只看終點：R</td></tr>
+    <tr><td class="l"><span style="color:var(--fix)">━</span> 自己開 2 倍、不調整</td><td class="l">一開始 2 倍，之後<b>漲了變小、跌了變大</b></td><td class="l">只看終點：2R（跌破 −50% 歸零）</td></tr>
+    <tr><td class="l"><span style="color:var(--lev)">━</span> 正二</td><td class="l">每天收盤調回 2 倍（追高殺低）</td><td class="l">終點<b>和</b>過程：≈ (1+R)² · e<sup>−Σr²</sup></td></tr>
+  </tbody>
+</table>
+
+<div class="card">
+  <div class="presets">
+    <button data-r="20" data-sd="0.5" data-n="100">穩定上漲</button>
+    <button data-r="0" data-sd="2" data-n="100">震盪後回到原點</button>
+    <button data-r="10" data-sd="3" data-n="100">高波動小漲</button>
+    <button data-r="60" data-sd="1.5" data-n="100">大漲</button>
+    <button data-r="-45" data-sd="2" data-n="100">崩跌</button>
+  </div>
+  <div class="controls">
+    <label>指數 N 天後的漲跌 R <input type="range" id="cmpR" min="-45" max="60" step="1" value="10"> <b id="cmpRv">+10%</b></label>
+    <label>每日波動 <input type="range" id="cmpSd" min="0" max="3.5" step="0.25" value="1.5"> <b id="cmpSdv">1.50%</b></label>
+    <label>天數 N <input type="range" id="cmpN" min="20" max="250" step="10" value="100"> <b id="cmpNv">100</b></label>
+    <button id="cmpSeedBtn">🎲 換一條路徑（終點不變）</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="k">原型 ETF</div><div class="v" id="cmpI">—</div></div>
+    <div class="stat"><div class="k">自己開 2 倍、不調整</div><div class="v" id="cmpF">—</div></div>
+    <div class="stat"><div class="k">正二</div><div class="v" id="cmpV">—</div></div>
+    <div class="stat"><div class="k">正二 − 不調整</div><div class="v" id="cmpD">—</div></div>
+  </div>
+  <div class="chart-title">資產淨值（起點 100）</div>
+  <div class="legend">
+    <span><i style="border-color:var(--idx)"></i>原型 ETF</span>
+    <span><i style="border-color:var(--fix)"></i>自己開 2 倍、不調整</span>
+    <span><i style="border-color:var(--lev)"></i>正二</span>
+  </div>
+  <div class="chart" id="chCmpNav"></div>
+  <div class="chart-title">實際槓桿（曝險 ÷ 自有資金）：差異的根源</div>
+  <div class="legend">
+    <span><i style="border-color:var(--idx)"></i>原型 1 倍</span>
+    <span><i style="border-color:var(--fix)"></i>不調整：隨漲跌漂移（上限顯示 6 倍）</span>
+    <span><i style="border-color:var(--lev)"></i>正二：每天固定 2 倍</span>
+  </div>
+  <div class="chart" id="chCmpLev"></div>
+  <p class="note" id="cmpNote"></p>
+</div>
+
+<h3>同一個終點，波動越大差距越大（每種波動 100 條路徑平均）</h3>
+<p class="note" id="cmpMcCap"></p>
+<table id="cmpMc">
+  <thead><tr><th>每日波動</th><th>約年化</th><th>原型</th><th>自己開 2 倍、不調整</th><th>正二（平均）</th><th>正二 − 不調整</th></tr></thead>
+  <tbody></tbody>
+</table>
+
+<h3>誰比較好？「終點 × 波動」勝負地圖</h3>
+<p>每一格是 N 天後「正二 − 自己開 2 倍不調整」的報酬差（百分點），用公式 (1+R)²·e<sup>−Nσ²</sup> − (1+2R) 計算。<span style="color:var(--lev);font-weight:700">橘色</span>代表正二勝，<span style="color:var(--fix);font-weight:700">青綠色</span>代表不調整勝，顏色越深差距越大。外框標出的是上方目前的設定。</p>
+<div class="chart" id="cmpHeat"></div>
+
+<div class="key">
+<b>三個結論：</b>
+<ol style="margin:.3rem 0 0">
+  <li><b>趨勢強、波動小 → 正二勝。</b>漲了加碼讓獲利複利，終點效果是 (1+R)²，比 1+2R 多出 R²。</li>
+  <li><b>波動大、終點不遠 → 不調整勝。</b>正二每天追高殺低被磨損 e<sup>−Nσ²</sup>，自己開的 2 倍卻完全不受過程影響。</li>
+  <li><b>深跌 → 正二勝，而且是保命。</b>不調整的部位在指數跌到起點一半時歸零（實務上會更早被追繳、斷頭）。正二每天跌了就減碼，只要單日沒有跌超過 50%，就不會一次歸零。</li>
+</ol>
+</div>
+
+<table>
+  <thead><tr><th class="l">比較項目</th><th class="l">正二</th><th class="l">自己開 2 倍不調整（融資／期貨）</th></tr></thead>
+  <tbody>
+    <tr><td class="l">報酬是否看路徑</td><td class="l">看。震盪會耗損，趨勢會加成</td><td class="l">不看，只看終點（除非中途爆倉）</td></tr>
+    <tr><td class="l">槓桿</td><td class="l">每天固定 2 倍</td><td class="l">漲後下降（越漲越保守）、跌後上升（越跌越危險）</td></tr>
+    <tr><td class="l">大跌時</td><td class="l">自動減碼，虧損逐步放緩</td><td class="l">槓桿急升，指數跌 50% 即歸零；實務上更早被追繳</td></tr>
+    <tr><td class="l">成本</td><td class="l">內扣管理費、期貨轉倉成本</td><td class="l">融資利息，或期貨轉倉成本</td></tr>
+    <tr><td class="l">操作負擔</td><td class="l">買了就好，不用顧保證金</td><td class="l">要自己管維持率／保證金、期貨要轉倉</td></tr>
+    <tr><td class="l">最大損失</td><td class="l">投入的本金</td><td class="l">融資可能被斷頭；期貨在跳空時可能虧超過保證金</td></tr>
+  </tbody>
+</table>
+<p class="note">本節模擬未計入融資利息、內扣費用與期貨轉倉成本。兩種做法都有資金成本，量級相近（2 倍曝險 ≈ 借入 1 倍資金），所以比較的重點是「是否每天再平衡」造成的差異。資金成本、股息與期貨價差的影響見下一節 ⑥。</p>
+
+<!-- ============ 6. BASIS & DIVIDENDS ============ -->
+<h2 id="basis">⑥ 期貨價差與除權息：長期報酬的另外兩股力量</h2>
+<p>前面都假設正二「直接持有 2 倍指數」。實際上國內的正二型 ETF 主要透過<b>指數期貨</b>建立 2 倍曝險，其餘資金放在現金或短期票券生息（實際持股組合請以投信公布的持股明細為準）。用期貨就會帶進兩件事：<b>期貨和指數之間的價差</b>，以及<b>股息如何反映在期貨價格裡</b>。</p>
+
+<h3>6.1 正二的資產負債：期貨＋現金</h3>
+<div class="eq">淨值 N ＝ 現金 ≈ N（生息 r）　＋　期貨部位名目本金 2N（不用付全額，只押保證金）</div>
+<p>持有期貨不用出全額本金，所以資金幾乎都留在現金裡生息。期貨的合理價（參考<a href="指數套利_期現貨套利動畫與分析.html">指數套利</a>那篇）是：</p>
+<div class="eq">F* ＝ S × (1 + r·T) − D<span class="c">r：資金利率　D：到期前的股息</span></div>
+<p>從期貨買進到結算，價格會從 F 收斂到 S。所以多單的報酬是：</p>
+<div class="eq">期貨報酬 ≈ 指數價格報酬 ＋ <b>(S − F) ÷ S</b>
+<span class="c">逆價差（F＜S）→ 多賺；正價差（F＞S）→ 少賺</span></div>
+<p>把 F 代入合理價，價差拆成三塊：</p>
+<div class="eq">(S − F) ÷ S ＝ <b>q·T</b>（股息）− <b>r·T</b>（資金成本）− <b>m·T</b>（錯價，m＞0 代表期貨偏貴）</div>
+
+<h3>6.2 正二一年的報酬從哪裡來</h3>
+<div class="eq">正二年報酬 ≈ 2 × [ 價格報酬 ＋ q − r − m ] ＋ r（現金利息）− 費用</div>
+<div class="eq">　　　　　＝ 2 × 價格報酬 ＋ <b>2q</b> − <b>r</b> − <b>2m</b> − 費用（＋波動耗損另計）</div>
+<div class="key">
+<b>股息其實沒有消失，而是藏在逆價差裡。</b>正二不持有股票、也不配息，常被誤以為「領不到股息」。但市場預期的股息已經讓期貨比現貨便宜（逆價差），正二每個月轉倉時都買進這個折價。到期收斂時，折價就變成獲利，大約等於拿到 <b>2 倍股息</b>。<br>
+<b>資金成本也沒有消失，而是藏在正價差裡。</b>期貨價格含了 2 倍曝險的利息（−2r），但正二手上的現金同時在生息（+r），淨效果是 <b>−r</b>，剛好是「借入 1 倍資金」的成本。
+</div>
+
+<h3>6.3 跟誰比？同一個價差，結論不一樣</h3>
+<table>
+  <thead><tr><th class="l">價差來源</th><th class="l">對比「2 × 價格指數」（不含息）</th><th class="l">對比「2 × 含息報酬，扣 1 倍資金成本」</th></tr></thead>
+  <tbody>
+    <tr><td class="l">股息造成的逆價差（q）</td><td class="l upc">正二多賺 ≈ 2q／年</td><td class="l mut">中性，本來就該拿到</td></tr>
+    <tr><td class="l">利率造成的正價差（r）</td><td class="l dnc">正二少賺 ≈ r／年（−2r＋現金利息 r）</td><td class="l mut">中性，本來就該付</td></tr>
+    <tr><td class="l">錯價：期貨偏貴（額外正價差）</td><td class="l dnc">少賺 2m</td><td class="l dnc">少賺 2m（真實損失）</td></tr>
+    <tr><td class="l">錯價：期貨偏便宜（額外逆價差）</td><td class="l upc">多賺 2|m|</td><td class="l upc">多賺 2|m|（真實收益）</td></tr>
+  </tbody>
+</table>
+<p>正二官方追蹤的是「標的指數<b>每日</b>報酬的 2 倍」。台灣50 這類標的指數是<b>價格指數</b>，除息時會掉點。對比這個標的，股息帶來的逆價差會讓正二長期出現<b>正向的追蹤差異</b>。但如果拿去和「含息的 2 倍」比，它只是拿回本來就該有的股息。<b>真正的超額（或損失）只有錯價 m</b>。</p>
+
+<h3>6.4 除息日當天發生什麼事</h3>
+<ul>
+  <li><b>價格指數</b>：成分股除息，指數機械性下跌約「當天的股息點數」，看起來像是一個下跌日。</li>
+  <li><b>期貨</b>：這筆股息早就算進價格裡（逆價差），所以期貨<b>不會</b>因為除息而跟著跌。</li>
+  <li><b>結果</b>：那天正二淨值的表現會比「2 × 指數當日漲跌」好。台股除息集中在 6～9 月，這段期間的近月合約常有數百點的逆價差，正二的正向追蹤差異也多半在這段期間累積（機制推論；實際數字以投信公布的追蹤差異為準）。</li>
+  <li><b>除權（配股）</b>也一樣：預期的配股稀釋會反映在期貨價格裡，邏輯和除息相同。</li>
+</ul>
+
+<h3>6.5 模擬一年：期貨實作的正二 vs 兩種「2 倍」</h3>
+<p>下面模擬一年 252 個交易日，指數依設定的漲幅與波動隨機走，股息依右側假設集中在 6～9 月除息。正二每天持有 2 倍淨值的近月期貨，每到結算日轉倉到下個月。</p>
+<div class="card" id="bsCard">
+  <div class="bs-grid">
+    <label><span>指數價格年漲幅（不含息）<b id="bsMuV"></b></span><input type="range" id="bsMu" min="-10" max="15" step="0.5" value="5"></label>
+    <label><span>股息殖利率 q<b id="bsQV"></b></span><input type="range" id="bsQ" min="0" max="6" step="0.25" value="3"></label>
+    <label><span>資金利率 r<b id="bsRV"></b></span><input type="range" id="bsR" min="0" max="5" step="0.25" value="1.5"></label>
+    <label><span>期貨錯價 m（年化，正＝偏貴）<b id="bsMV"></b></span><input type="range" id="bsM" min="-3" max="3" step="0.25" value="0"></label>
+    <label><span>指數年化波動 σ<b id="bsSigV"></b></span><input type="range" id="bsSig" min="5" max="40" step="1" value="20"></label>
+    <label><span>轉倉成本（每次，bp）<b id="bsRollV"></b></span><input type="range" id="bsRoll" min="0" max="10" step="0.5" value="1"></label>
+    <label><span>正二內扣費用（年）<b id="bsFeeV"></b></span><input type="range" id="bsFee" min="0" max="2" step="0.05" value="1"></label>
+    <label><span>原型 ETF 內扣費用（年）<b id="bsFee1V"></b></span><input type="range" id="bsFee1" min="0" max="1" step="0.05" value="0.4"></label>
+    <label><span>長期比較年數<b id="bsYV"></b></span><input type="range" id="bsY" min="1" max="20" step="1" value="10"></label>
+  </div>
+  <div class="controls"><button id="bsSeed">🎲 換一條一年路徑</button><span class="note">上方參數同時驅動 6.5 的一年模擬、6.6 的長期拆解與 6.7 的長期曲線。</span></div>
+
+  <div class="stats">
+    <div class="stat"><div class="k">正二（期貨實作）一年</div><div class="v" id="bsO1">—</div></div>
+    <div class="stat"><div class="k">2 × 價格指數（每日）</div><div class="v" id="bsO2">—</div></div>
+    <div class="stat"><div class="k">2 × 含息報酬 − 資金成本</div><div class="v" id="bsO3">—</div></div>
+    <div class="stat"><div class="k">正二 − 2×價格指數</div><div class="v" id="bsO4">—</div></div>
+  </div>
+  <div class="chart-title">一年淨值（起點 100）</div>
+  <div class="legend">
+    <span><i style="border-color:var(--lev)"></i>正二（持有近月期貨＋現金，每月轉倉）</span>
+    <span><i class="dash" style="border-color:var(--naive)"></i>2 × 價格指數日報酬（官方追蹤目標）</span>
+    <span><i style="border-color:var(--fix)"></i>2 × 含息報酬指數日報酬 − 資金成本 r</span>
+  </div>
+  <div class="chart" id="chBsNav"></div>
+  <div class="chart-title">近月期貨價差 F − S（點，指數起點 20,000）</div>
+  <div class="legend">
+    <span><i style="border-color:var(--lev)"></i>近月期貨價差（負值＝逆價差）</span>
+    <span class="mut">每 21 個交易日結算一次並轉倉到下個月</span>
+  </div>
+  <div class="chart" id="chBsBasis"></div>
+  <p class="note" id="bsNote"></p>
+</div>
+
+<h3>6.6 長期年化報酬拆解（幾何成長率）</h3>
+<p>把 6.2 的每一項加上 ② 的波動耗損，就得到正二長期的年化成長率。對照組是「原型 ETF，股息再投入」：</p>
+<div class="eq">正二：g₂ ≈ 2μ + 2q − r − 2m − 轉倉 − 費用 − 2σ²</div>
+<div class="eq">原型（含息）：g₁ ≈ μ + q − 費用₁ − ½σ²<span class="c">μ：指數價格的算術平均年漲幅</span></div>
+<table class="wf" id="bsWf">
+  <thead><tr><th class="l">項目</th><th>正二（年化）</th><th class="l">貢獻</th><th>原型含息（年化）</th></tr></thead>
+  <tbody></tbody>
+</table>
+<p class="note" id="bsWfNote"></p>
+
+<h3>6.7 長期曲線：沒有波動時的「期望路徑」</h3>
+<div class="legend">
+  <span><i style="border-color:var(--lev)"></i>正二</span>
+  <span><i style="border-color:var(--idx)"></i>原型 ETF（股息再投入）</span>
+  <span><i class="dash" style="border-color:var(--naive)"></i>價格指數（不含息）</span>
+</div>
+<div class="chart" id="chBsLong"></div>
+
+<div class="key">
+<b>重點整理：</b>
+<ol style="margin:.3rem 0 0">
+  <li><b>正二沒有「漏掉股息」</b>：股息藏在期貨的逆價差裡，每月轉倉時吃進來，效果約 +2q／年。</li>
+  <li><b>正二要付 1 倍的資金成本</b>：藏在期貨的正價差裡，淨效果約 −r／年。利率越高，正二越吃虧。</li>
+  <li><b>對比價格指數，「股息 &gt; 利率」時正二有正向追蹤差異</b>，主要在除息季累積。但這不是超額報酬，只是拿回股息。</li>
+  <li><b>真正的超額只來自錯價 m</b>：市場偏空、避險賣壓重時，期貨常比合理價更便宜，多單轉倉時多賺；過熱時期貨偏貴，多單每次轉倉都多付一點（推論，視市況而定）。</li>
+  <li><b>長期能否贏原型</b>：條件從 ② 的「超額報酬 &gt; 1.5σ²」變成 <b>μ + q − r − 2m − 轉倉 − (費用 − 費用₁) &gt; 1.5σ²</b>。股息高、利率低時對正二有利；波動大、利率高、期貨長期偏貴時不利。</li>
+</ol>
+</div>
+<p class="note">其他實務差異：①若正二用台指期（加權指數）的期貨去追蹤台灣50 指數，兩個指數的成分與除息時程不同，會產生額外的追蹤誤差；②原型 ETF 配息時投資人要申報股利所得，正二的股息效果直接反映在淨值上，稅負可能不同，依個人狀況而定；③除息點數是「預估值」，實際配息與預估有落差時，期貨價格會重新調整。</p>
+
+<!-- ============ 7. WHY ============ -->
+<h2 id="why">⑦ 為什麼它「本質上」就是追高殺低</h2>
+
+<h3>5.1 這是產品定義逼出來的，不是操作失誤</h3>
+<p>正二承諾的是<b>每天</b>提供 2 倍報酬，而不是「長期 2 倍」。要讓明天的報酬也是 2 倍，今天收盤時曝險就必須剛好是淨值的 2 倍。2.1 已經證明，指數變動後槓桿一定會偏離 2，唯一的修正方式就是 ΔE = 2Nr。這個交易方向永遠與當日漲跌相同，<b>沒有任何裁量空間</b>。</p>
+
+<h3>5.2 它是在「複製」一個凸性部位，代價像選擇權的時間價值</h3>
+<p>想複製一個買權（call）時，價格越高持有越多、價格越低持有越少，也就是漲了買、跌了賣。這正是正二每天做的事。所以從公式看，正二的終值 ∝ (S<sub>T</sub>)²，是一個凸的報酬曲線：</p>
+<ul>
+  <li><b>趨勢市場</b>（不論漲跌）：凸性發揮作用，表現優於「2 × 指數」。上漲時越漲越多，下跌時因為一路減碼，少賠一點。</li>
+  <li><b>震盪市場</b>：每次「買高、賣低」都繳一點學費，累積下來就是 e<sup>−σ²T</sup> 的耗損，類似買選擇權每天被扣的時間價值（theta）。</li>
+</ul>
+<div class="key">一句話：<b>正二 = 用「追高殺低」換來的凸性。</b>趨勢給你回報，震盪向你收費。</div>
+
+<h3>5.3 和「固定比例再平衡」剛好相反</h3>
+<p>股債 60/40、50/50 這種固定比例投資組合（0＜L＜1），股票漲了比重變高就要賣，跌了比重變低就要買，是「高賣低買」，在震盪市場反而能賺到再平衡紅利。正二的係數 L(L−1)＞0，方向完全相反，所以在震盪中是付錢的一方。</p>
+
+<h3>5.4 收盤時的市場衝擊</h3>
+<p>所有正二、正三、反一、反二的再平衡方向都相同（漲日一起買、跌日一起賣），而且通常集中在收盤前後執行（台灣的槓桿 ETF 多半透過期貨調整曝險）。整體需調整的規模約為：</p>
+<div class="eq">需求曝險 ≈ Σ L(L−1) × 基金規模 × 當日漲跌幅</div>
+<p class="note">假設例：規模 1,000 億元的正二，當天指數 +3% → 收盤需加碼約 2 × 1,000 × 3% = 60 億元的指數曝險。這些單子會放大尾盤原本的方向，是市場上常說「槓桿 ETF 助漲助跌」的來源（實際衝擊大小視市場深度而定，屬推論）。</p>
+
+<h3>5.5 常見誤解</h3>
+<table>
+  <thead><tr><th class="l">誤解</th><th class="l">事實</th></tr></thead>
+  <tbody>
+    <tr><td class="l">指數漲 30%，正二就漲 60%</td><td class="l">只有「單日」是 2 倍。多日報酬取決於路徑，趨勢時可能 &gt; 60%，震盪時可能遠 &lt; 60%。</td></tr>
+    <tr><td class="l">指數回到原點，正二也會回到原點</td><td class="l">不會。只要過程中有波動，正二約剩 e<sup>−σ²T</sup>，見 2.3 表格，以及 ④ 散佈圖中指數報酬接近 0 的那些點（大多落在 0 以下），或 ⑤ 的「震盪後回到原點」情境。</td></tr>
+    <tr><td class="l">正二長期一定歸零</td><td class="l">不一定。若長期有趨勢且超額報酬 &gt; 1.5σ²，長抱反而贏原型（2.4）。風險在於大幅回檔與長期盤整。</td></tr>
+    <tr><td class="l">追高殺低是經理人操作不好</td><td class="l">是產品規則（每日固定 2 倍）的必然結果，任何人來管都一樣。</td></tr>
+  </tbody>
+</table>
+
+<!-- ============ 6. TAKEAWAY ============ -->
+<h2 id="take">⑧ 結論與實務意涵</h2>
+<div class="card">
+  <ol>
+    <li><b>核心公式：</b>ΔE = L(L−1)·N·r。正二每天收盤調整 2Nr，方向與當日漲跌相同，也就是追高殺低。</li>
+    <li><b>終值公式：</b>V<sub>T</sub>/V<sub>0</sub> ≈ (S<sub>T</sub>/S<sub>0</sub>)²·e<sup>−σ²T</sup>·e<sup>−成本·T</sup>。報酬看「指數終點的平方」，再扣「波動的平方」。</li>
+    <li><b>趨勢是朋友，震盪是敵人：</b>同方向連續變動時多賺（+2r₁r₂），漲跌交替時多賠。</li>
+    <li><b>和「自己開 2 倍不調整」的差別：</b>不調整只看終點（2R），但槓桿會漂移、跌破一半就歸零；正二槓桿固定，趨勢中勝出、震盪中落後、深跌時保命（見 ⑤ 勝負地圖）。</li>
+    <li><b>期貨價差與股息：</b>正二用期貨建立曝險，股息藏在逆價差裡（約 +2q／年），資金成本藏在正價差裡（約 −r／年），真正的超額或損失只來自錯價（見 ⑥）。</li>
+    <li><b>判斷長抱與否：</b>看自己對「趨勢強度 vs 波動」的預期。超額報酬要大於 1.5σ² 才划算；波動越高，耗損以平方速度放大。</li>
+    <li><b>風險管理：</b>正二本身的部位「跌時自動減碼」，所以不會一次歸零，但深跌後要回本需要的指數漲幅比原型多很多。可以把自己的資金部位當成另一層槓桿來管理，例如用定期再平衡「正二＋現金」的比例，讓整體有效槓桿落在 0～2 之間。</li>
+  </ol>
+  <p class="note">本文為教育用途的數學說明，未計入追蹤誤差、期貨轉倉價差、折溢價、內扣費用與稅負；不構成任何投資建議。</p>
+</div>
+
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const pct = (v, d=2) => (v>=0?'+':'') + (v*100).toFixed(d) + '%';
+const f2 = v => v.toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2});
+const clsOf = v => v>0 ? 'upc' : v<0 ? 'dnc' : 'mut';
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const ease = p => p<.5 ? 2*p*p : 1-Math.pow(-2*p+2,2)/2;
+const tween = (dur, fn) => new Promise(res => {
+  if (dur<=0){ fn(1); return res(); }
+  const t0 = performance.now();
+  const f = t => { const p = Math.min(1,(t-t0)/dur); fn(ease(p)); p<1 ? requestAnimationFrame(f) : res(); };
+  requestAnimationFrame(f);
+});
+const lerp = (a,b,p) => a+(b-a)*p;
+
+/* ---------- generic line chart with hover ---------- */
+function niceTicks(min,max,count){
+  const span = max-min || 1, s0 = span/count, mag = Math.pow(10,Math.floor(Math.log10(s0))), e = s0/mag;
+  const step = (e>=7.5?10:e>=3.5?5:e>=1.5?2:1)*mag, out=[];
+  for (let v=Math.ceil(min/step)*step; v<=max+1e-9; v+=step) out.push(+v.toFixed(8));
+  return out;
+}
+function lineChart(host, cfg){
+  const VW=760, VH=cfg.h||240, m={l:50,r:16,t:14,b:28};
+  const n = cfg.series[0].values.length;
+  let lo=Infinity, hi=-Infinity;
+  cfg.series.forEach(s=>s.values.forEach(v=>{ if(v<lo)lo=v; if(v>hi)hi=v; }));
+  if (cfg.ref!=null){ lo=Math.min(lo,cfg.ref); hi=Math.max(hi,cfg.ref); }
+  const pad = (hi-lo)*0.1 || 2; lo-=pad; hi+=pad;
+  const iw = VW-m.l-m.r, ih = VH-m.t-m.b;
+  const X = i => m.l + (n<=1 ? iw/2 : i*iw/(n-1));
+  const Y = v => m.t + (hi-v)/(hi-lo)*ih;
+  let s = `<svg viewBox="0 0 ${VW} ${VH}" role="img" aria-label="${cfg.label}">`;
+  niceTicks(lo,hi,4).forEach(t=>{
+    s += `<line class="grid" x1="${m.l}" x2="${VW-m.r}" y1="${Y(t)}" y2="${Y(t)}"/>`+
+         `<text class="tick" x="${m.l-8}" y="${Y(t)+4}" text-anchor="end">${cfg.yfmt?cfg.yfmt(t):t}</text>`;
+  });
+  if (cfg.ref!=null) s += `<line class="base" x1="${m.l}" x2="${VW-m.r}" y1="${Y(cfg.ref)}" y2="${Y(cfg.ref)}"/>`;
+  const xs = n<=1 ? [0] : niceTicks(0,n-1,6).filter(t=>Number.isInteger(t));
+  xs.forEach(t=>{ s += `<text class="tick" x="${X(t)}" y="${VH-8}" text-anchor="middle">${cfg.xfmt?cfg.xfmt(t):t}</text>`; });
+  cfg.series.forEach(se=>{
+    const d = se.values.map((v,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join('');
+    s += `<path d="${d}" fill="none" stroke="${se.color}" stroke-width="2" ${se.dash?'stroke-dasharray="5 4"':''} stroke-linejoin="round" stroke-linecap="round"/>`;
+    if (n===1) s += `<circle cx="${X(0)}" cy="${Y(se.values[0])}" r="4" fill="${se.color}"/>`;
+  });
+  (cfg.markers||[]).forEach(mk=>{
+    const x=X(mk.i), y=Y(mk.v), z=mk.size, col = mk.buy?css('--up'):css('--down');
+    const d = mk.buy
+      ? `M${x},${y-z} L${x+z*.9},${y+z*.6} L${x-z*.9},${y+z*.6} Z`
+      : `M${x},${y+z} L${x+z*.9},${y-z*.6} L${x-z*.9},${y-z*.6} Z`;
+    s += `<path d="${d}" fill="${col}" stroke="${css('--surface')}" stroke-width="2" stroke-linejoin="round"/>`;
+  });
+  s += `<g class="hov" style="display:none"><line class="xhair" y1="${m.t}" y2="${VH-m.b}"/>`+
+       cfg.series.map(se=>`<circle r="4.5" fill="${se.color}" stroke="${css('--surface')}" stroke-width="2"/>`).join('')+`</g>`;
+  s += `<rect x="${m.l-6}" y="0" width="${iw+12}" height="${VH}" fill="transparent"/></svg><div class="tip" hidden></div>`;
+  host.innerHTML = s;
+  const svg = host.querySelector('svg'), hov = svg.querySelector('.hov'), tip = host.querySelector('.tip');
+  const line = hov.querySelector('line'), dots = hov.querySelectorAll('circle');
+  const move = e => {
+    const r = svg.getBoundingClientRect(), vx = (e.clientX-r.left)/r.width*VW;
+    const i = n<=1 ? 0 : Math.max(0,Math.min(n-1,Math.round((vx-m.l)/iw*(n-1))));
+    hov.style.display=''; line.setAttribute('x1',X(i)); line.setAttribute('x2',X(i));
+    cfg.series.forEach((se,k)=>{ dots[k].setAttribute('cx',X(i)); dots[k].setAttribute('cy',Y(se.values[i])); });
+    tip.hidden=false; tip.innerHTML = cfg.tip(i);
+    const px = X(i)/VW*r.width, tw = tip.offsetWidth;
+    tip.style.left = (px+14+tw > r.width ? px-14-tw : px+14) + 'px';
+    tip.style.top = '6px';
+  };
+  svg.addEventListener('pointermove', move);
+  svg.addEventListener('pointerleave', ()=>{ hov.style.display='none'; tip.hidden=true; });
+}
+const tipRow = (color, name, val, dash) =>
+  `<div class="row"><span><span class="sw" style="background:${color};${dash?'opacity:.7':''}"></span>${name}</span><b>${val}</b></div>`;
+
+/* ---------- simulator ---------- */
+const BASE=270, MAXH=225;
+const st = { day:0, idx:100, nav:100, exp:200, scale:MAXH/(200*1.3), hist:[] };
+let busy=false, playing=false, chopSign=1;
+
+function resetSim(){
+  st.day=0; st.idx=100; st.nav=100; st.exp=200; st.scale=MAXH/(200*1.3); chopSign=1;
+  st.hist=[{day:0, idx:100, nav:100, r:0, lev:2, trade:0}];
+  drawBars({nav:100, exp:200, tgt:200, gap:0});
+  setReadout({r:null, nav:100, exp:200, lev:2, trade:null});
+  $('rdPhase').textContent='按「▲ 指數上漲」或「▼ 指數下跌」開始。';
+  $('rdFormula').innerHTML='再平衡金額 ΔE = 2 × r × N';
+  updateCharts();
+}
+
+function drawBars(v){
+  const k=st.scale, hN=v.nav*k, hE=v.exp*k, hOwn=Math.min(v.nav,v.exp)*k, hT=v.tgt*k;
+  const set=(id,a)=>{ const el=$(id); for(const p in a) el.setAttribute(p,a[p]); };
+  set('bNav',{y:BASE-hN,height:Math.max(0,hN)});
+  set('tNav',{y:BASE-hN-8}); $('tNav').textContent=f2(v.nav);
+  set('bOwn',{y:BASE-hOwn,height:Math.max(0,hOwn)});
+  set('bBor',{y:BASE-hE,height:Math.max(0,hE-hOwn)});
+  set('lTgt',{y1:BASE-hT,y2:BASE-hT});
+  set('tTgt',{y:BASE-hT+4});
+  const topE=Math.max(hE,hT);
+  set('tExp',{y:BASE-topE-8}); $('tExp').textContent=f2(v.exp);
+  const gap=$('bGap'), tg=$('tGap');
+  if (v.gap){
+    const buy = v.tgt>v.exp, y1=BASE-Math.max(hE,hT), h=Math.abs(hT-hE);
+    gap.setAttribute('y',y1); gap.setAttribute('height',h);
+    gap.setAttribute('fill', buy?'var(--up-soft)':'var(--down-soft)');
+    gap.setAttribute('stroke', buy?'var(--up)':'var(--down)');
+    gap.setAttribute('opacity', v.gap);
+    tg.setAttribute('opacity', v.gap); tg.setAttribute('fill', buy?'var(--up)':'var(--down)');
+    tg.setAttribute('y', BASE-topE-28);
+    tg.textContent = v.gapText||'';
+  } else { gap.setAttribute('opacity',0); tg.setAttribute('opacity',0); }
+}
+
+function setReadout(o){
+  $('rdDay').textContent = `第 ${st.day} 天`;
+  $('rdIdx').textContent = f2(o.idx ?? st.idx);
+  $('rdR').innerHTML = o.r==null ? '—' : `<span class="${clsOf(o.r)}">${o.r>0?'▲':o.r<0?'▼':''} ${pct(o.r)}</span>`;
+  $('rdNav').textContent = f2(o.nav);
+  $('rdExp').textContent = f2(o.exp);
+  $('rdLev').textContent = o.lev.toFixed(3)+'×';
+  const pos = Math.max(0,Math.min(100, (o.lev-1.8)/0.4*100));
+  $('levDot').style.left = pos+'%';
+  $('rdTrade').innerHTML = o.trade==null ? '—'
+    : o.trade>0 ? `<span class="upc">▲ 買進 ${f2(o.trade)}</span>`
+    : o.trade<0 ? `<span class="dnc">▼ 賣出 ${f2(-o.trade)}</span>` : '不動';
+}
+
+async function step(r, speed=1){
+  if (busy) return; busy=true; setBtns();
+  const N=st.nav, E=st.exp, I=st.idx;
+  const N1=N*(1+2*r), E1=E*(1+r), T1=2*N1, dE=T1-E1, I1=I*(1+r);
+  const s0=st.scale, s1=MAXH/(Math.max(E,E1,T1,N1)*1.3);
+  st.day++;
+  $('rdPhase').innerHTML = `<b>① 指數${r>=0?'上漲':'下跌'} ${pct(r)}</b>：部位損益 = 曝險 × r = ${f2(E)} × ${pct(r)} = <span class="${clsOf(r)}">${f2(E*r)}</span>，全部進入淨值。`;
+  $('rdFormula').innerHTML = `N′ = N(1+2r) = ${f2(N)} × ${(1+2*r).toFixed(4)} = ${f2(N1)}　·　E′ = E(1+r) = ${f2(E1)}`;
+  await tween(900/speed, p=>{
+    st.scale = lerp(s0,s1,p);
+    const nav=lerp(N,N1,p), exp=lerp(E,E1,p);
+    drawBars({nav, exp, tgt:2*nav, gap:0});
+    setReadout({idx:lerp(I,I1,p), r, nav, exp, lev:exp/nav, trade:null});
+  });
+  const lev1 = E1/N1;
+  const gapText = dE>0 ? `▲ 缺 ${f2(dE)} → 買進` : `▼ 多 ${f2(-dE)} → 賣出`;
+  $('rdPhase').innerHTML = `<b>② 槓桿偏離</b>：E′ ÷ N′ = ${f2(E1)} ÷ ${f2(N1)} = <b>${lev1.toFixed(3)}×</b>，${r>0?'低於':'高於'} 2 倍。目標曝險 2N′ = ${f2(T1)}。`;
+  $('rdFormula').innerHTML = `ΔE = 2N′ − E′ = ${f2(T1)} − ${f2(E1)} = <b class="${clsOf(dE)}">${f2(dE)}</b>　＝ 2 × r × N = 2 × ${pct(r)} × ${f2(N)}`;
+  await tween(300/speed, p=>drawBars({nav:N1, exp:E1, tgt:T1, gap:p, gapText}));
+  await sleep(550/speed);
+  await tween(800/speed, p=>{
+    const exp=lerp(E1,T1,p);
+    drawBars({nav:N1, exp, tgt:T1, gap:1-p, gapText});
+    setReadout({idx:I1, r, nav:N1, exp, lev:exp/N1, trade:dE});
+  });
+  st.nav=N1; st.exp=T1; st.idx=I1;
+  st.hist.push({day:st.day, idx:I1, nav:N1, r, lev:lev1, trade:dE});
+  $('rdPhase').innerHTML = `<b>③ 再平衡完成</b>：${dE>0?'<span class="upc">漲了 → 收盤買進</span>':'<span class="dnc">跌了 → 收盤賣出</span>'}，槓桿回到 2.000×。這就是「追高殺低」。`;
+  updateCharts();
+  busy=false; setBtns();
+}
+
+function updateCharts(){
+  const h=st.hist, idxV=h.map(x=>x.idx), navV=h.map(x=>x.nav), naive=h.map(x=>100+2*(x.idx-100));
+  const maxT = Math.max(1,...h.map(x=>Math.abs(x.trade)));
+  lineChart($('chSimIdx'), {
+    label:'指數走勢與再平衡交易', h:220, ref:100,
+    series:[{name:'指數', color:css('--idx'), values:idxV}],
+    markers: h.slice(1).map((x,k)=>({i:k+1, v:x.idx, buy:x.trade>0, size:5+7*Math.sqrt(Math.abs(x.trade)/maxT)})),
+    xfmt:t=>`第${t}天`, yfmt:t=>t.toFixed(0),
+    tip:i=>{ const x=h[i]; return `<b>第 ${x.day} 天</b>`+tipRow(css('--idx'),'指數',f2(x.idx))+
+      (i? `<div class="row"><span>當日漲跌</span><b class="${clsOf(x.r)}">${pct(x.r)}</b></div>`+
+          `<div class="row"><span>收盤</span><b class="${clsOf(x.trade)}">${x.trade>0?'▲ 買進 ':'▼ 賣出 '}${f2(Math.abs(x.trade))}</b></div>` : ''); }
+  });
+  lineChart($('chSimNav'), {
+    label:'正二淨值與 2 倍指數報酬', h:220, ref:100,
+    series:[{name:'正二淨值', color:css('--lev'), values:navV},{name:'2×指數報酬', color:css('--naive'), values:naive, dash:true}],
+    xfmt:t=>`第${t}天`, yfmt:t=>t.toFixed(0),
+    tip:i=>`<b>第 ${h[i].day} 天</b>`+tipRow(css('--lev'),'正二淨值',f2(navV[i]))+tipRow(css('--naive'),'2×指數報酬',f2(naive[i]),true)+
+      `<div class="row"><span>路徑效應</span><b class="${clsOf(navV[i]-naive[i])}">${(navV[i]-naive[i]>=0?'+':'')+f2(navV[i]-naive[i])}</b></div>`
+  });
+  const last=h[h.length-1], rI=last.idx/100-1, rL=last.nav/100-1, rN=2*rI;
+  $('sIdx').innerHTML=`<span class="${clsOf(rI)}">${pct(rI)}</span>`;
+  $('sLev').innerHTML=`<span class="${clsOf(rL)}">${pct(rL)}</span>`;
+  $('sNaive').innerHTML=`<span class="${clsOf(rN)}">${pct(rN)}</span>`;
+  $('sGap').innerHTML=`<span class="${clsOf(rL-rN)}">${pct(rL-rN)}</span>`;
+  const tb=$('logTbl').querySelector('tbody');
+  tb.innerHTML = h.slice(1).slice(-15).reverse().map(x=>
+    `<tr><td>${x.day}</td><td class="${clsOf(x.r)}">${pct(x.r)}</td><td>${f2(x.idx)}</td><td>${f2(x.nav)}</td><td>${x.lev.toFixed(3)}×</td>`+
+    `<td class="${clsOf(x.trade)}">${x.trade>0?'▲ 買進 ':'▼ 賣出 '}${f2(Math.abs(x.trade))}</td></tr>`).join('') ||
+    `<tr><td colspan="6" class="mut l">尚無交易</td></tr>`;
+}
+
+const amp = () => +$('amp').value/100;
+function gauss(){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+function nextR(){
+  const a=amp(), mode=$('mode').value; let r;
+  if (mode==='chop'){ r=chopSign*a; chopSign*=-1; }
+  else if (mode==='up') r = 0.5*a + 0.6*a*gauss();
+  else if (mode==='down') r = -0.5*a + 0.6*a*gauss();
+  else r = a*gauss()*0.8;
+  return Math.max(-0.095, Math.min(0.095, r));
+}
+function setBtns(){
+  $('btnUp').disabled = $('btnDn').disabled = busy||playing;
+  $('btnReset').disabled = busy&&!playing ? true : false;
+  $('btnPlay').textContent = playing ? '⏸ 暫停' : '▶ 播放';
+}
+$('amp').addEventListener('input',()=>$('ampv').textContent=(+$('amp').value).toFixed(1)+'%');
+$('btnUp').onclick=()=>step(amp());
+$('btnDn').onclick=()=>step(-amp());
+$('btnPlay').onclick=async()=>{
+  playing=!playing; setBtns();
+  while(playing){
+    if (st.nav<5){ playing=false; break; }
+    const sp=+$('speed').value;
+    await step(nextR(), sp*1.6);
+    await sleep(200/sp);
+  }
+  setBtns();
+};
+$('btnReset').onclick=async()=>{ playing=false; while(busy) await sleep(50); resetSim(); setBtns(); };
+
+/* ---------- decay table ---------- */
+$('decayTbl').querySelector('tbody').innerHTML = [0.10,0.15,0.20,0.25,0.30,0.40,0.50].map(s=>{
+  const v2=Math.exp(-s*s), v3=Math.exp(-3*s*s);
+  return `<tr><td>${(s*100).toFixed(0)}%</td><td>${(v2*100).toFixed(1)}%</td><td class="dnc">−${((1-v2)*100).toFixed(1)}%</td><td>${(v3*100).toFixed(1)}%</td></tr>`;
+}).join('');
+
+/* ---------- ④ 蒙地卡羅實驗室 ---------- */
+let mcSeed = 20261124, mcRaf = 0;
+function rng(a){ return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+const quant=(s,p)=>{ const i=(s.length-1)*p, lo=Math.floor(i), hi=Math.ceil(i); return s[lo]+(s[hi]-s[lo])*(i-lo); };
+const sortedCopy=a=>Float64Array.from(a).sort();
+const fracOf=(a,f)=>{ let c=0; for(let i=0;i<a.length;i++) if(f(a[i],i)) c++; return c/a.length; };
+function logTicks(lo,hi){
+  const c=[0.02,0.05,0.1,0.2,0.3,0.5,0.7,1,1.5,2,3,5,7,10,15,20,30,50,100,200,500];
+  let t=c.filter(v=>v>=lo&&v<=hi);
+  while(t.length>7) t=t.filter((v,i)=>i%2===0||v===1);
+  return t;
+}
+const retLbl=t=>{ const r=Math.round((t-1)*100); return (r>0?'+':r<0?'−':'')+Math.abs(r)+'%'; };
+
+/* 扇形圖：分位數帶隨時間展開，對數 y 軸 */
+function fanChart(host,cfg){
+  const VW=760,VH=300,m={l:52,r:14,t:12,b:28},iw=VW-m.l-m.r,ih=VH-m.t-m.b;
+  const xs=cfg.xs,n=xs.length,xmax=xs[n-1]||1;
+  let lo=1,hi=1; cfg.groups.forEach(g=>{ g.q[0].forEach(v=>{if(v<lo)lo=v;}); g.q[4].forEach(v=>{if(v>hi)hi=v;}); });
+  lo*=0.9; hi*=1.1; const LL=Math.log(lo),LH=Math.log(hi);
+  const X=d=>m.l+d/xmax*iw, Y=v=>m.t+(LH-Math.log(Math.max(v,1e-9)))/(LH-LL)*ih;
+  let s=`<svg viewBox="0 0 ${VW} ${VH}" role="img" aria-label="${cfg.label}">`;
+  logTicks(lo,hi).forEach(t=>{ s+=`<line class="${t===1?'base':'grid'}" x1="${m.l}" x2="${VW-m.r}" y1="${Y(t)}" y2="${Y(t)}"/><text class="tick" x="${m.l-8}" y="${Y(t)+4}" text-anchor="end">${(t*100).toFixed(0)}</text>`; });
+  cfg.xticks.forEach(t=>{ s+=`<text class="tick" x="${X(t.d)}" y="${VH-8}" text-anchor="middle">${t.label}</text>`; });
+  const band=(g,a,b,op)=>{
+    const top=xs.map((d,i)=>`${i?'L':'M'}${X(d).toFixed(1)},${Y(g.q[b][i]).toFixed(1)}`).join('');
+    let bot=''; for(let i=n-1;i>=0;i--) bot+=`L${X(xs[i]).toFixed(1)},${Y(g.q[a][i]).toFixed(1)}`;
+    return `<path d="${top}${bot}Z" fill="${g.color}" fill-opacity="${op}"/>`;
+  };
+  cfg.groups.forEach(g=>{ s+=band(g,0,4,0.12)+band(g,1,3,0.26); });
+  cfg.groups.forEach(g=>{ s+=`<path d="${xs.map((d,i)=>`${i?'L':'M'}${X(d).toFixed(1)},${Y(g.q[2][i]).toFixed(1)}`).join('')}" fill="none" stroke="${g.color}" stroke-width="2.5" stroke-linejoin="round"/>`; });
+  s+=`<g class="hov" style="display:none"><line class="xhair" y1="${m.t}" y2="${VH-m.b}"/>`+cfg.groups.map(g=>`<circle r="4.5" fill="${g.color}" stroke="${css('--surface')}" stroke-width="2"/>`).join('')+`</g>`;
+  s+=`<rect x="${m.l-6}" y="0" width="${iw+12}" height="${VH}" fill="transparent"/></svg><div class="tip" hidden></div>`;
+  host.innerHTML=s;
+  const svg=host.querySelector('svg'),hov=svg.querySelector('.hov'),tip=host.querySelector('.tip'),line=hov.querySelector('line'),dots=hov.querySelectorAll('circle');
+  const pv=v=>(v*100).toFixed(1);
+  svg.addEventListener('pointermove',e=>{
+    const r=svg.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*VW,d0=(vx-m.l)/iw*xmax;
+    let i=0; for(let k=1;k<n;k++) if(Math.abs(xs[k]-d0)<Math.abs(xs[i]-d0)) i=k;
+    hov.style.display=''; line.setAttribute('x1',X(xs[i])); line.setAttribute('x2',X(xs[i]));
+    cfg.groups.forEach((g,k)=>{ dots[k].setAttribute('cx',X(xs[i])); dots[k].setAttribute('cy',Y(g.q[2][i])); });
+    tip.hidden=false;
+    tip.innerHTML=`<b>第 ${xs[i]} 天（${(xs[i]/250).toFixed(2)} 年）</b>`+cfg.groups.map(g=>
+      tipRow(g.color,g.name+' 中位數',pv(g.q[2][i]))+`<div class="row"><span>　中間 50%</span><b>${pv(g.q[1][i])}～${pv(g.q[3][i])}</b></div><div class="row"><span>　中間 90%</span><b>${pv(g.q[0][i])}～${pv(g.q[4][i])}</b></div>`).join('');
+    const px=X(xs[i])/VW*r.width,tw=tip.offsetWidth; tip.style.left=(px+14+tw>r.width?px-14-tw:px+14)+'px'; tip.style.top='6px';
+  });
+  svg.addEventListener('pointerleave',()=>{hov.style.display='none';tip.hidden=true;});
+}
+
+/* 直方圖：終點淨值倍數，對數 x 軸 */
+function histChart(host,cfg){
+  const VW=380,VH=270,m={l:40,r:10,t:12,b:28},iw=VW-m.l-m.r,ih=VH-m.t-m.b,B=30;
+  const all=sortedCopy([...cfg.groups[0].vals,...cfg.groups[1].vals].filter(v=>v>0));
+  let lo=Math.min(quant(all,0.003),0.95), hi=Math.max(quant(all,0.997),1.05);
+  const LL=Math.log(lo),LH=Math.log(hi),bw=(LH-LL)/B;
+  const fr=cfg.groups.map(g=>{ const c=new Array(B).fill(0); g.vals.forEach(v=>{ if(v<=0) return; const k=Math.floor((Math.log(v)-LL)/bw); if(k>=0&&k<B) c[k]++; }); return c.map(x=>x/g.vals.length); });
+  const ymax=Math.max(...fr.flat())*1.12||1;
+  const X=lv=>m.l+(lv-LL)/(LH-LL)*iw, Y=f=>m.t+(1-f/ymax)*ih;
+  let s=`<svg viewBox="0 0 ${VW} ${VH}" role="img" aria-label="終點淨值分布">`;
+  niceTicks(0,ymax,3).forEach(t=>{ s+=`<line class="grid" x1="${m.l}" x2="${VW-m.r}" y1="${Y(t)}" y2="${Y(t)}"/><text class="tick" x="${m.l-6}" y="${Y(t)+4}" text-anchor="end">${(t*100).toFixed(0)}%</text>`; });
+  logTicks(lo,hi).forEach(t=>{ s+=`<text class="tick" x="${X(Math.log(t))}" y="${VH-8}" text-anchor="middle">${retLbl(t)}</text>`; });
+  cfg.groups.forEach((g,gi)=>{
+    let d=`M${X(LL)},${Y(0)}`; fr[gi].forEach((f,k)=>{ d+=`L${X(LL+k*bw).toFixed(1)},${Y(f).toFixed(1)}L${X(LL+(k+1)*bw).toFixed(1)},${Y(f).toFixed(1)}`; }); d+=`L${X(LH)},${Y(0)}Z`;
+    s+=`<path d="${d}" fill="${g.color}" fill-opacity="0.22" stroke="${g.color}" stroke-width="1.5" stroke-linejoin="round"/>`;
+  });
+  s+=`<line x1="${X(0)}" x2="${X(0)}" y1="${m.t}" y2="${VH-m.b}" stroke="${css('--text-2')}" stroke-dasharray="4 3"/><text class="tick" x="${X(0)+4}" y="${m.t+10}">不賺不賠</text>`;
+  s+=`<line class="xhair" style="display:none" y1="${m.t}" y2="${VH-m.b}"/><rect x="${m.l}" y="0" width="${iw}" height="${VH}" fill="transparent"/></svg><div class="tip" hidden></div>`;
+  host.innerHTML=s;
+  const svg=host.querySelector('svg'),tip=host.querySelector('.tip'),xh=svg.querySelector('.xhair');
+  svg.addEventListener('pointermove',e=>{
+    const r=svg.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*VW,k=Math.max(0,Math.min(B-1,Math.floor(((vx-m.l)/iw*(LH-LL))/bw)));
+    const a=Math.exp(LL+k*bw),b=Math.exp(LL+(k+1)*bw),cx=X(LL+(k+.5)*bw);
+    xh.style.display=''; xh.setAttribute('x1',cx); xh.setAttribute('x2',cx);
+    tip.hidden=false; tip.innerHTML=`<b>終點報酬 ${retLbl(a)} ～ ${retLbl(b)}</b>`+cfg.groups.map((g,gi)=>tipRow(g.color,g.name,(fr[gi][k]*100).toFixed(1)+'% 的路徑')).join('');
+    const px=cx/VW*r.width,tw=tip.offsetWidth; tip.style.left=(px+14+tw>r.width?px-14-tw:px+14)+'px'; tip.style.top='6px';
+  });
+  svg.addEventListener('pointerleave',()=>{xh.style.display='none';tip.hidden=true;});
+}
+
+/* 散佈圖：每條路徑的 指數報酬 vs 正二報酬 */
+function scatterChart(host,cfg){
+  const VW=380,VH=270,m={l:46,r:10,t:12,b:28},iw=VW-m.l-m.r,ih=VH-m.t-m.b;
+  const xr=cfg.x, yr=cfg.y, sx=sortedCopy(xr), sy=sortedCopy(yr), theo=x=>(1+x)*(1+x)*Math.exp(-cfg.sig*cfg.sig*cfg.T)-1;
+  let x0=quant(sx,0.005), x1=quant(sx,0.995), y0=Math.min(quant(sy,0.005),theo(x0),2*x0), y1=Math.max(quant(sy,0.995),theo(x1));
+  const px=(x1-x0)*0.06, py=(y1-y0)*0.06; x0-=px; x1+=px; y0=Math.max(-1.05,y0-py); y1+=py;
+  const X=v=>m.l+(v-x0)/(x1-x0)*iw, Y=v=>m.t+(y1-v)/(y1-y0)*ih;
+  let s=`<svg viewBox="0 0 ${VW} ${VH}" role="img" aria-label="指數報酬與正二報酬散佈圖"><defs><clipPath id="mcClip"><rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}"/></clipPath></defs>`;
+  niceTicks(y0,y1,4).forEach(t=>{ s+=`<line class="${Math.abs(t)<1e-9?'base':'grid'}" x1="${m.l}" x2="${VW-m.r}" y1="${Y(t)}" y2="${Y(t)}"/><text class="tick" x="${m.l-6}" y="${Y(t)+4}" text-anchor="end">${(t*100).toFixed(0)}%</text>`; });
+  niceTicks(x0,x1,4).forEach(t=>{ s+=`<text class="tick" x="${X(t)}" y="${VH-8}" text-anchor="middle">${(t*100).toFixed(0)}%</text>`; if(Math.abs(t)<1e-9) s+=`<line class="base" x1="${X(0)}" x2="${X(0)}" y1="${m.t}" y2="${VH-m.b}"/>`; });
+  const NP=Math.min(xr.length,1500); let pts='';
+  for(let i=0;i<NP;i++){ const a=xr[i],b=yr[i]; if(a<x0||a>x1||b<y0||b>y1) continue; pts+=`<circle cx="${X(a).toFixed(1)}" cy="${Y(b).toFixed(1)}" r="2.6"/>`; }
+  const line=(f,attrs)=>{ let d=''; for(let k=0;k<=60;k++){ const x=x0+(x1-x0)*k/60; d+=`${k?'L':'M'}${X(x).toFixed(1)},${Y(f(x)).toFixed(1)}`; } return `<path d="${d}" fill="none" ${attrs}/>`; };
+  s+=`<g clip-path="url(#mcClip)">`+line(x=>2*x,`stroke="${css('--naive')}" stroke-width="2" stroke-dasharray="5 4"`)+line(theo,`stroke="${css('--text')}" stroke-width="1.5" stroke-opacity="0.75"`)+
+     `<g fill="${css('--lev')}" fill-opacity="0.45">${pts}</g></g>`;
+  s+=`<circle class="hl" r="5" fill="none" stroke="${css('--text')}" stroke-width="2" style="display:none"/><rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent"/></svg><div class="tip" hidden></div>`;
+  host.innerHTML=s;
+  const svg=host.querySelector('svg'),tip=host.querySelector('.tip'),hl=svg.querySelector('.hl');
+  svg.addEventListener('pointermove',e=>{
+    const r=svg.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*VW,vy=(e.clientY-r.top)/r.height*VH;
+    let best=-1,bd=144; for(let i=0;i<NP;i++){ const dx=X(xr[i])-vx,dy=Y(yr[i])-vy,d=dx*dx+dy*dy; if(d<bd){bd=d;best=i;} }
+    if(best<0){ hl.style.display='none'; tip.hidden=true; return; }
+    const a=xr[best],b=yr[best]; hl.style.display=''; hl.setAttribute('cx',X(a)); hl.setAttribute('cy',Y(b));
+    tip.hidden=false; tip.innerHTML=`<b>路徑 #${best+1}</b><div class="row"><span>指數報酬</span><b>${pct(a,1)}</b></div>`+tipRow(css('--lev'),'正二報酬',pct(b,1))+tipRow(css('--naive'),'2 × 指數報酬',pct(2*a,1))+
+      `<div class="row"><span>路徑效應</span><b class="${clsOf(b-2*a)}">${(b-2*a>=0?'+':'−')+Math.abs((b-2*a)*100).toFixed(1)} 點</b></div>`;
+    const ppx=X(a)/VW*r.width,tw=tip.offsetWidth; tip.style.left=(ppx+14+tw>r.width?ppx-14-tw:ppx+14)+'px'; tip.style.top=(Y(b)/VH*r.height+10)+'px';
+  });
+  svg.addEventListener('pointerleave',()=>{hl.style.display='none';tip.hidden=true;});
+}
+
+function runLab(){
+  const mu=+$('mcMu').value/100, sig=+$('mcSig').value/100, T=+$('mcY').value, P=+$('mcP').value;
+  $('mcMuV').textContent=(mu>=0?'+':'')+(mu*100).toFixed(0)+'%';
+  $('mcSigV').textContent=(sig*100).toFixed(0)+'%';
+  $('mcYV').textContent=T<1?`${Math.round(T*12)} 個月`:`${T} 年`;
+  const D=Math.max(1,Math.round(250*T)), K=Math.min(D,100);
+  const cps=[]; for(let k=0;k<=K;k++){ const d=Math.round(k*D/K); if(!cps.length||cps[cps.length-1]!==d) cps.push(d); }
+  const Icp=cps.map(()=>new Float64Array(P)), Vcp=cps.map(()=>new Float64Array(P));
+  const IT=new Float64Array(P), VT=new Float64Array(P);
+  const g=rng(mcSeed), dm=mu/250, ds=sig/Math.sqrt(250);
+  let spare=null;
+  const gs=()=>{ if(spare!==null){ const z=spare; spare=null; return z; } let u=0,v=0; while(!u)u=g(); v=g(); const R=Math.sqrt(-2*Math.log(u)); spare=R*Math.sin(2*Math.PI*v); return R*Math.cos(2*Math.PI*v); };
+  for(let p=0;p<P;p++){
+    let I=1,V=1,ci=1; Icp[0][p]=1; Vcp[0][p]=1;
+    for(let d=1;d<=D;d++){
+      const r=Math.max(-0.49, dm+ds*gs());
+      I*=1+r; V*=1+2*r;
+      if(d===cps[ci]){ Icp[ci][p]=I; Vcp[ci][p]=V; ci++; }
+    }
+    IT[p]=I; VT[p]=V;
+  }
+  const qs=[0.05,0.25,0.5,0.75,0.95];
+  // 每個時間點只排序一次
+  const qGroup=arrs=>{ const out=qs.map(()=>[]); arrs.forEach(a=>{ const s=sortedCopy(a); qs.forEach((q,j)=>out[j].push(quant(s,q))); }); return out; };
+  const xticks=[]; if(T>=1){ const st=T>6?2:1; for(let y=0;y<=T+1e-9;y+=st) xticks.push({d:Math.round(y*250),label:y+'年'}); } else { for(let k=0;k<=4;k++){ const d=Math.round(D*k/4); xticks.push({d,label:d+'天'}); } }
+  fanChart($('chMcFan'),{label:'原型與正二淨值分布隨時間展開',xs:cps,xticks,groups:[
+    {name:'原型',color:css('--idx'),q:qGroup(Icp)},
+    {name:'正二',color:css('--lev'),q:qGroup(Vcp)}]});
+  histChart($('chMcHist'),{groups:[{name:'原型',color:css('--idx'),vals:IT},{name:'正二',color:css('--lev'),vals:VT}]});
+  const xr=IT.map(v=>v-1), yr=VT.map(v=>v-1);
+  scatterChart($('chMcSc'),{x:xr,y:yr,sig,T});
+
+  // 統計
+  const rI=IT.map(v=>v-1), rV=VT.map(v=>v-1), rN=IT.map(v=>Math.max(-1,2*(v-1)));
+  const stat=a=>{ const s=sortedCopy(a); let sum=0; for(const x of a) sum+=x; return {mean:sum/a.length, med:quant(s,0.5), p5:quant(s,0.05), p95:quant(s,0.95), loss:fracOf(a,x=>x<0), half:fracOf(a,x=>x<-0.5)}; };
+  const SI=stat(rI), SV=stat(rV), SN=stat(rN);
+  const tMean=Math.exp(2*mu*T)-1, tMed=Math.exp((2*mu-2*sig*sig)*T)-1;
+  const put=(id,v)=>$(id).innerHTML=`<span class="${clsOf(v)}">${pct(v,1)}</span>`;
+  put('mcS1',SV.mean); $('mcS1s').textContent=`理論 e^(2μT)−1 ≈ ${pct(tMean,1)}；原型平均 ${pct(SI.mean,1)}`;
+  put('mcS2',SV.med);  $('mcS2s').textContent=`理論 e^((2μ−2σ²)T)−1 ≈ ${pct(tMed,1)}`;
+  const pWin=fracOf(VT,(v,i)=>v>IT[i]), pBehind=fracOf(VT,(v,i)=>v-1<2*(IT[i]-1));
+  $('mcS3').textContent=(pWin*100).toFixed(1)+'%'; $('mcS4').textContent=(pBehind*100).toFixed(1)+'%';
+  const row=(name,f,fmt)=>`<tr><td>${name}</td>${[SI,SV,SN].map(S=>{ const v=f(S); return `<td class="${fmt==='p'?'':clsOf(v)}">${fmt==='p'?(v*100).toFixed(1)+'%':pct(v,1)}</td>`; }).join('')}</tr>`;
+  $('mcTbl').querySelector('tbody').innerHTML=
+    row('平均報酬',S=>S.mean)+row('中位數報酬（一半路徑高於此）',S=>S.med)+row('5% 分位（壞情況）',S=>S.p5)+row('95% 分位（好情況）',S=>S.p95)+
+    row('虧損機率',S=>S.loss,'p')+row('虧損超過 50% 的機率',S=>S.half,'p');
+  const gap=SV.mean-SV.med;
+  $('mcNote').innerHTML=`${P.toLocaleString('zh-TW')} 條路徑、${T<1?Math.round(T*12)+' 個月':T+' 年'}：正二的<b>平均</b>報酬 ${pct(SV.mean,1)}，約是原型平均 ${pct(SI.mean,1)} 的 ${(SV.mean/(SI.mean||1e-9)).toFixed(1)} 倍；但<b>中位數</b>只有 ${pct(SV.med,1)}，比平均低了 ${(gap*100).toFixed(1)} 個百分點，差距來自波動耗損 2σ²T = ${(2*sig*sig*T*100).toFixed(1)}%（對數）。`+
+    `有 ${(pWin*100).toFixed(0)}% 的路徑正二贏原型，${(SV.loss*100).toFixed(0)}% 的路徑正二虧損（原型 ${(SI.loss*100).toFixed(0)}%）。`+
+    (SV.half>0.005?` 最壞的情況下，有 ${(SV.half*100).toFixed(1)}% 的路徑正二虧掉一半以上（原型 ${(SI.half*100).toFixed(1)}%）。`:'')+
+    ` 把波動 σ 調高，或把期間拉長，可以看到中位數和平均拉開的速度遠快於原型。`;
+}
+const schedLab=()=>{ cancelAnimationFrame(mcRaf); mcRaf=requestAnimationFrame(runLab); };
+['mcMu','mcSig','mcY'].forEach(id=>$(id).addEventListener('input',schedLab));
+$('mcP').onchange=runLab;
+$('mcSeedBtn').onclick=()=>{ mcSeed=(Math.random()*1e9)|0; runLab(); };
+
+/* ---------- ⑤ 比較：原型 / 自己開 2 倍不調整 / 正二 ---------- */
+let cmpSeed = 3;
+function lcg(seed){ let s=(Math.abs(seed)%2147483646)+1; return ()=>{ s=s*16807%2147483647; return (s-1)/2147483646; }; }
+function gaussG(g){ let u=0,v=0; while(!u)u=g(); while(!v)v=g(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+// 產生一條 n 天、每日波動 sd 的路徑，平移漂移量讓終點剛好是 1+R
+function pathTo(R, sd, n, seed){
+  const g=lcg(seed), z=[]; for(let i=0;i<n;i++) z.push(sd*gaussG(g));
+  let lo=-0.2, hi=0.2;
+  for(let k=0;k<50;k++){ const m=(lo+hi)/2; let S=1; for(const x of z) S*=1+Math.max(-0.45,x+m); if(S>1+R) hi=m; else lo=m; }
+  const m=(lo+hi)/2; return z.map(x=>Math.max(-0.45,x+m));
+}
+function simStrats(r){
+  const I=[100], V=[100], F=[100], LF=[2]; let ruin=-1;
+  r.forEach((x,i)=>{
+    const It=I[I.length-1]*(1+x); I.push(It);
+    V.push(V[V.length-1]*(1+2*x));
+    let Ft = ruin>=0 ? 0 : 2*It-100;            // 曝險 200×(It/100) − 借款 100
+    if(Ft<=0 && ruin<0){ ruin=i+1; Ft=0; }
+    F.push(Ft); LF.push(ruin>=0 ? 6 : Math.min(6, 2*It/Ft));
+  });
+  return {I,V,F,LF,ruin};
+}
+function runCmp(){
+  const R=+$('cmpR').value/100, sd=+$('cmpSd').value/100, n=+$('cmpN').value;
+  $('cmpRv').textContent=(R>=0?'+':'')+Math.round(R*100)+'%';
+  $('cmpSdv').textContent=(sd*100).toFixed(2)+'%（年化約 '+Math.round(sd*Math.sqrt(250)*100)+'%）';
+  $('cmpNv').textContent=n;
+  const path=pathTo(R,sd,n,cmpSeed), P=simStrats(path);
+  const sumSq=path.reduce((s,x)=>s+x*x,0);
+  const rI=P.I[n]/100-1, rF=P.F[n]/100-1, rV=P.V[n]/100-1, d=rV-rF;
+  const put=(id,v,extra='')=>$(id).innerHTML=`<span class="${clsOf(v)}">${pct(v,1)}</span>${extra}`;
+  put('cmpI',rI); put('cmpF',rF, P.ruin>=0?' <span class="mut" style="font-size:.8rem">（第 '+P.ruin+' 天歸零）</span>':''); put('cmpV',rV);
+  $('cmpD').innerHTML=`<span style="color:${d>=0?'var(--lev)':'var(--fix)'}">${(d>=0?'+':'−')+Math.abs(d*100).toFixed(1)} 點</span>`;
+  const navTip=i=>`<b>第 ${i} 天</b>`+tipRow(css('--idx'),'原型',f2(P.I[i]))+tipRow(css('--fix'),'不調整',P.F[i]<=0?'歸零':f2(P.F[i]))+tipRow(css('--lev'),'正二',f2(P.V[i]))+
+    (i?`<div class="row"><span>當日指數</span><b class="${clsOf(P.I[i]-P.I[i-1])}">${pct(P.I[i]/P.I[i-1]-1)}</b></div>`:'');
+  lineChart($('chCmpNav'),{label:'三種做法的淨值',h:250,ref:100,
+    series:[{color:css('--idx'),values:P.I},{color:css('--fix'),values:P.F},{color:css('--lev'),values:P.V}],
+    xfmt:t=>`第${t}天`, yfmt:t=>t.toFixed(0), tip:navTip});
+  const one=P.I.map(()=>1), two=P.I.map(()=>2);
+  lineChart($('chCmpLev'),{label:'三種做法的實際槓桿',h:200,ref:2,
+    series:[{color:css('--idx'),values:one},{color:css('--fix'),values:P.LF},{color:css('--lev'),values:two}],
+    xfmt:t=>`第${t}天`, yfmt:t=>t.toFixed(1)+'×',
+    tip:i=>`<b>第 ${i} 天</b>`+tipRow(css('--idx'),'原型','1.00×')+tipRow(css('--fix'),'不調整',P.F[i]<=0?'已歸零':P.LF[i].toFixed(2)+'×')+tipRow(css('--lev'),'正二','2.00×')});
+  // 說明文字
+  const drag=(1-Math.exp(-sumSq))*100, minI=Math.min(...P.I);
+  // 不調整部位的真實槓桿（不受圖表 6 倍上限影響）
+  const realLev=P.I.map((x,i)=>P.F[i]>0?2*x/P.F[i]:Infinity);
+  const maxLev=Math.max(...realLev.slice(0,P.ruin>=0?P.ruin:undefined)), endLev=realLev[n];
+  const levTxt=v=>v>=100?'100 倍以上':v.toFixed(2)+' 倍';
+  const danger = P.ruin<0 && maxLev>=3
+    ? `　⚠ 不調整的部位途中實際槓桿最高達 ${levTxt(maxLev)}${endLev>=3?`，期末仍有 ${levTxt(endLev)}（自有資金只剩 ${f2(P.F[n])}）`:''}，再跌一段就會歸零或被斷頭；正二自始至終都是 2 倍。` : '';
+  let note;
+  if(P.ruin>=0) note=`自己開 2 倍的部位在第 ${P.ruin} 天、指數跌破起點一半時歸零，之後指數再怎麼漲都回不來（實務上會更早被追繳、斷頭）。正二每天跌了就減碼，最後還剩 ${f2(P.V[n])}。`;
+  else if(d>=0) note=`正二勝 ${Math.abs(d*100).toFixed(1)} 點：終點效果 (1+R)² 比 1+2R 多出 R² = ${(R*R*100).toFixed(1)} 點，大於這條路徑的震盪耗損（1 − e^−Σr² ≈ ${drag.toFixed(1)}%）。` + (danger || `不調整的槓桿在途中介於 ${Math.min(...realLev).toFixed(2)}～${maxLev.toFixed(2)} 倍之間漂移。`);
+  else note=`不調整勝 ${Math.abs(d*100).toFixed(1)} 點：這條路徑的震盪讓正二每天追高殺低，被磨掉約 ${drag.toFixed(1)}%（1 − e^−Σr²），超過終點效果多出的 R² = ${(R*R*100).toFixed(1)} 點。自己開的 2 倍部位不受過程影響，只看終點 2R = ${pct(2*R,1)}；` + (danger || `代價是它的槓桿在途中一度升到 ${maxLev.toFixed(2)} 倍（指數最低 ${f2(minI)}）。`);
+  $('cmpNote').textContent=note;
+  // 蒙地卡羅表
+  const sds=[0,0.01,0.015,0.02,0.03];
+  $('cmpMcCap').textContent=`目前設定：指數 ${n} 天後 ${pct(R,0)}。每一列的指數終點都相同，只改變過程的每日波動。`;
+  $('cmpMc').querySelector('tbody').innerHTML=sds.map(s=>{
+    const K=s?100:1; let sv=0,sf=0,nr=0;
+    for(let k=0;k<K;k++){ const q=simStrats(pathTo(R,s,n,1000+k*7919)); sv+=q.V[n]; sf+=q.F[n]; if(q.ruin>=0) nr++; }
+    const v=sv/K/100-1, f=sf/K/100-1, dd=v-f;
+    return `<tr><td>${(s*100).toFixed(1)}%</td><td>${Math.round(s*Math.sqrt(250)*100)}%</td><td>${pct(R,1)}</td>`+
+      `<td>${pct(f,1)}${nr?` <span class="mut">（${Math.round(nr/K*100)}% 路徑中途歸零）</span>`:''}</td><td>${pct(v,1)}</td>`+
+      `<td style="color:${dd>=0?'var(--lev)':'var(--fix)'};font-weight:600">${(dd>=0?'+':'−')+Math.abs(dd*100).toFixed(1)} 點</td></tr>`;
+  }).join('');
+  drawHeat(R,sd,n);
+}
+function drawHeat(Rc,sdc,n){
+  const Rs=[-40,-30,-20,-10,0,10,20,30,40,50,60], Ss=[0,0.5,1,1.5,2,2.5,3,3.5];
+  const VW=760, l=128, t=34, cw=(VW-l-6)/Rs.length, ch=32, VH=t+ch*Ss.length+30;
+  const val=(R,s)=>((1+R/100)**2*Math.exp(-n*(s/100)**2) - Math.max(0,1+2*R/100))*100;
+  let maxAbs=1; Ss.forEach(s=>Rs.forEach(R=>maxAbs=Math.max(maxAbs,Math.abs(val(R,s)))));
+  const ci=Rs.reduce((b,R,i)=>Math.abs(R-Rc*100)<Math.abs(Rs[b]-Rc*100)?i:b,0), si=Ss.reduce((b,s,i)=>Math.abs(s-sdc*100)<Math.abs(Ss[b]-sdc*100)?i:b,0);
+  let s=`<svg viewBox="0 0 ${VW} ${VH}" role="img" aria-label="正二與不調整兩倍的勝負地圖">`;
+  s+=`<text x="${l+cw*Rs.length/2}" y="12" text-anchor="middle" font-size="12" fill="${css('--text-2')}">指數 ${n} 天後的漲跌 R →</text>`;
+  Rs.forEach((R,i)=>{ s+=`<text x="${l+cw*i+cw/2}" y="${t-6}" text-anchor="middle" font-size="11" fill="${css('--muted')}">${R>0?'+':''}${R}%</text>`; });
+  Ss.forEach((sd,j)=>{
+    s+=`<text x="${l-8}" y="${t+ch*j+ch/2+4}" text-anchor="end" font-size="11" fill="${css('--muted')}">每日 ${sd.toFixed(1)}%（年化 ${Math.round(sd*Math.sqrt(250))}%）</text>`;
+    Rs.forEach((R,i)=>{
+      const v=val(R,sd), a=0.1+0.6*Math.min(1,Math.abs(v)/maxAbs), col=v>=0?css('--lev'):css('--fix');
+      const cur=(i===ci&&j===si)?' cur':'';
+      s+=`<rect class="cell${cur}" x="${l+cw*i}" y="${t+ch*j}" width="${cw}" height="${ch}" rx="4" fill="${col}" fill-opacity="${a.toFixed(2)}" data-r="${R}" data-s="${sd}" data-v="${v.toFixed(1)}"/>`;
+      s+=`<text x="${l+cw*i+cw/2}" y="${t+ch*j+ch/2+4}" text-anchor="middle" font-size="11" font-weight="600" fill="${css('--text')}" pointer-events="none">${Math.abs(v)<0.5?'0':(v>0?'+':'−')+Math.abs(v).toFixed(0)}</text>`;
+    });
+  });
+  s+=`<text x="${l}" y="${VH-8}" font-size="11" fill="${css('--muted')}">每格數字＝正二 − 不調整（百分點）。R ≤ −50% 時不調整的部位歸零；地圖未計入「途中先跌破一半」的爆倉。</text></svg><div class="tip" hidden></div>`;
+  const host=$('cmpHeat'); host.innerHTML=s;
+  const svg=host.querySelector('svg'), tip=host.querySelector('.tip');
+  svg.addEventListener('pointermove',e=>{
+    const c=e.target.closest('.cell'); if(!c){ tip.hidden=true; return; }
+    const R=+c.dataset.r, sd=+c.dataset.s, v=+c.dataset.v, V2=(1+R/100)**2*Math.exp(-n*(sd/100)**2)-1, F=Math.max(0,1+2*R/100)-1;
+    tip.hidden=false;
+    tip.innerHTML=`<b>R ${R>0?'+':''}${R}%，每日波動 ${sd}%</b>`+tipRow(css('--fix'),'不調整',pct(F,1))+tipRow(css('--lev'),'正二（公式）',pct(V2,1))+
+      `<div class="row"><span>差距</span><b style="color:${v>=0?'var(--lev)':'var(--fix)'}">${v>=0?'正二勝 ':'不調整勝 '}${Math.abs(v).toFixed(1)} 點</b></div>`;
+    const r=svg.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top, tw=tip.offsetWidth;
+    tip.style.left=(x+14+tw>r.width?x-14-tw:x+14)+'px'; tip.style.top=(y+12)+'px';
+  });
+  svg.addEventListener('pointerleave',()=>tip.hidden=true);
+}
+['cmpR','cmpSd','cmpN'].forEach(id=>$(id).addEventListener('input',runCmp));
+$('cmpSeedBtn').onclick=()=>{ cmpSeed=(Math.random()*1e9)|0; runCmp(); };
+document.querySelectorAll('.presets button').forEach(b=>b.onclick=()=>{ $('cmpR').value=b.dataset.r; $('cmpSd').value=b.dataset.sd; $('cmpN').value=b.dataset.n; runCmp(); });
+
+/* ---------- ⑥ 期貨價差與除權息 ---------- */
+const MW=[0,0,0.02,0.05,0.08,0.15,0.30,0.25,0.10,0.03,0.02,0]; // 每月除息權重（示意：集中在 6～9 月）
+let bsSeed=11;
+function runBasis(){
+  const v=id=>+$(id).value;
+  const mu=v('bsMu')/100, q=v('bsQ')/100, r=v('bsR')/100, m=v('bsM')/100, sig=v('bsSig')/100,
+        roll=v('bsRoll')/1e4, fee=v('bsFee')/100, fee1=v('bsFee1')/100, Y=v('bsY');
+  const lbl=(id,t)=>$(id).textContent=t;
+  lbl('bsMuV',(mu>=0?'+':'')+(mu*100).toFixed(1)+'%'); lbl('bsQV',(q*100).toFixed(2)+'%'); lbl('bsRV',(r*100).toFixed(2)+'%');
+  lbl('bsMV',(m>0?'+':'')+(m*100).toFixed(2)+'%'+(m>0?'（偏貴）':m<0?'（偏便宜）':'（合理）'));
+  lbl('bsSigV',(sig*100).toFixed(0)+'%'); lbl('bsRollV',(roll*1e4).toFixed(1)+' bp'); lbl('bsFeeV',(fee*100).toFixed(2)+'%');
+  lbl('bsFee1V',(fee1*100).toFixed(2)+'%'); lbl('bsYV',Y+' 年');
+
+  // --- 一年日模擬 ---
+  const N=252, MD=21, S0=20000;
+  const divAt=t=> t<=0?0 : q*MW[Math.floor((t-1)/MD)%12]/MD;
+  const rg=lcg(bsSeed), S=[S0], TR=[S0];
+  for(let t=1;t<=N;t++){
+    const x=(mu+q)/N + sig/Math.sqrt(N)*gaussG(rg);   // 含息的經濟報酬
+    TR.push(TR[t-1]*(1+x));
+    S.push(S[t-1]*(1+x-divAt(t)));                  // 價格指數：除息日扣掉股息
+  }
+  const divLeft=(t,E)=>{ let dv=0; for(let u=t+1;u<=E;u++) dv+=divAt(u); return dv; };
+  const F=(t,E)=>S[t]*(1+(r+m)*(E-t)/N-divLeft(t,E));
+  let nav=100, A=100, B=100, E=MD, rolls=0;
+  const NV=[100], NA=[100], NB=[100], BS=[F(0,E)-S0], DP=[-S0*divLeft(0,E)], RP=[S0*(r+m)*E/N], EX=[E];
+  for(let t=1;t<=N;t++){
+    const f0=F(t-1,E), f1=F(t,E);
+    nav *= 1 + 2*(f1/f0-1) + r/N - fee/N;            // 2 倍名目的期貨損益＋現金利息－費用
+    A *= 1 + 2*(S[t]/S[t-1]-1);
+    B *= 1 + 2*(TR[t]/TR[t-1]-1) - r/N;
+    if(t===E && t<N){ E+=MD; nav*=1-2*roll; rolls++; } // 結算日轉倉到下個月
+    NV.push(nav); NA.push(A); NB.push(B);
+    BS.push(F(t,E)-S[t]); DP.push(-S[t]*divLeft(t,E)); RP.push(S[t]*(r+m)*(E-t)/N); EX.push(E);
+  }
+  const o1=nav/100-1, o2=A/100-1, o3=B/100-1;
+  const put=(id,x)=>$(id).innerHTML=`<span class="${clsOf(x)}">${pct(x,1)}</span>`;
+  put('bsO1',o1); put('bsO2',o2); put('bsO3',o3);
+  $('bsO4').innerHTML=`<span class="${clsOf(o1-o2)}">${(o1-o2>=0?'+':'−')+Math.abs((o1-o2)*100).toFixed(1)} 點</span>`;
+  const monthOf=t=>Math.min(12,Math.floor(Math.max(0,t-1)/MD)+1);
+  lineChart($('chBsNav'),{label:'正二期貨實作與兩種 2 倍基準',h:240,ref:100,
+    series:[{color:css('--lev'),values:NV},{color:css('--naive'),values:NA,dash:true},{color:css('--fix'),values:NB}],
+    xfmt:t=>`第${t}天`, yfmt:t=>t.toFixed(0),
+    tip:i=>`<b>第 ${i} 天（${monthOf(i)} 月）</b>`+tipRow(css('--lev'),'正二（期貨）',f2(NV[i]))+tipRow(css('--naive'),'2×價格指數',f2(NA[i]))+tipRow(css('--fix'),'2×含息−r',f2(NB[i]))+
+      (i&&divAt(i)>0?`<div class="row"><span>今日除息</span><b>${(S[i-1]*divAt(i)).toFixed(1)} 點</b></div>`:'')});
+  lineChart($('chBsBasis'),{label:'近月期貨價差',h:200,ref:0,
+    series:[{color:css('--lev'),values:BS}],
+    xfmt:t=>`第${t}天`, yfmt:t=>t.toFixed(0),
+    tip:i=>`<b>第 ${i} 天（${monthOf(i)} 月），距結算 ${EX[i]-i} 天</b>`+tipRow(css('--lev'),'價差 F−S',(BS[i]>=0?'+':'')+BS[i].toFixed(1)+' 點')+
+      `<div class="row"><span>　股息部分（−D）</span><b>${DP[i].toFixed(1)}</b></div><div class="row"><span>　利率＋錯價部分</span><b>+${RP[i].toFixed(1)}</b></div>`});
+  const lnGap=Math.log(nav/A)*100, theo=(2*q-r-2*m-fee-2*roll*rolls)*100;
+  const minB=Math.min(...BS);
+  const moreLess=(x)=>`${x>=0?'多':'少'} <b>${Math.abs(x*100).toFixed(1)} 點</b>`;
+  $('bsNote').innerHTML=`這一年正二比「2 × 價格指數」${moreLess(o1-o2)}。換成對數差 ln(正二 ÷ 2×價格指數) = <b>${lnGap.toFixed(2)}%</b>，理論值 2q − r − 2m − 費用 − 轉倉 = <b>${theo.toFixed(2)}%</b>，模擬與公式一致。`+
+    `和「2 × 含息 − r」相比${moreLess(o1-o3)}，差在內扣費用、轉倉成本與錯價。`+
+    (minB<0?`近月合約的逆價差最深達 <b>${Math.abs(minB).toFixed(0)} 點</b>，出現在除息季前。`:`這組參數下近月合約沒有出現逆價差（利率效果大於股息）。`);
+
+  // --- 長期拆解（年化幾何成長率） ---
+  const rows=[
+    ['2 × 指數價格漲幅（2μ ／ μ）', 2*mu, mu],
+    ['＋ 股息，藏在逆價差（2q ／ q）', 2*q, q],
+    ['− 資金成本，借來的 1 倍（r）', -r, 0],
+    ['± 期貨錯價（−2m）', -2*m, 0],
+    ['− 轉倉成本（12 次 × 2 × 每次）', -24*roll, 0],
+    ['− 內扣費用', -fee, -fee1],
+    ['− 波動耗損（2σ² ／ ½σ²）', -2*sig*sig, -0.5*sig*sig],
+  ];
+  const g2=rows.reduce((s,x)=>s+x[1],0), g1=rows.reduce((s,x)=>s+x[2],0);
+  const mx=Math.max(...rows.map(x=>Math.abs(x[1])),Math.abs(g2),1e-6);
+  const bar=x=>{ const w=Math.abs(x)/mx*50; return `<div class="track"><div class="mid"></div><div class="b" style="${x>=0?`left:50%`:`left:${50-w}%`};width:${w}%;background:${x>=0?'var(--up)':'var(--down)'};opacity:.75"></div></div>`; };
+  const fmtp=x=>(x>0?'+':x<0?'−':'')+Math.abs(x*100).toFixed(2)+'%';
+  $('bsWf').querySelector('tbody').innerHTML=rows.map(x=>`<tr><td>${x[0]}</td><td class="${clsOf(x[1])}">${fmtp(x[1])}</td><td class="bar">${bar(x[1])}</td><td class="${clsOf(x[2])}">${x[2]?fmtp(x[2]):'—'}</td></tr>`).join('')+
+    `<tr class="tot"><td>＝ 年化成長率 g</td><td class="${clsOf(g2)}">${fmtp(g2)}</td><td class="bar">${bar(g2)}</td><td class="${clsOf(g1)}">${fmtp(g1)}</td></tr>`;
+  const muStar=1.5*sig*sig - q + r + 2*m + 24*roll + fee - fee1;
+  $('bsWfNote').innerHTML=`正二 − 原型 = <b class="${clsOf(g2-g1)}">${fmtp(g2-g1)}</b>／年。${Y} 年後期望倍數：正二 <b>×${Math.exp(g2*Y).toFixed(2)}</b>、原型含息 <b>×${Math.exp(g1*Y).toFixed(2)}</b>。`+
+    `在其他參數不變下，指數價格年漲幅 μ 要超過 <b>${(muStar*100).toFixed(2)}%</b>，正二長期才會勝過原型（＝1.5σ² − q + r + 2m + 轉倉 + 費用差）。`;
+  const yrs=[...Array(Y+1).keys()];
+  const L2=yrs.map(t=>100*Math.exp(g2*t)), L1=yrs.map(t=>100*Math.exp(g1*t)), LP=yrs.map(t=>100*Math.exp((mu-0.5*sig*sig)*t));
+  lineChart($('chBsLong'),{label:'長期期望成長曲線',h:240,ref:100,
+    series:[{color:css('--lev'),values:L2},{color:css('--idx'),values:L1},{color:css('--naive'),values:LP,dash:true}],
+    xfmt:t=>`${t}年`, yfmt:t=>t.toFixed(0),
+    tip:i=>`<b>第 ${i} 年</b>`+tipRow(css('--lev'),'正二',f2(L2[i]))+tipRow(css('--idx'),'原型含息',f2(L1[i]))+tipRow(css('--naive'),'價格指數',f2(LP[i]))});
+}
+document.querySelectorAll('#bsCard input[type=range]').forEach(el=>el.addEventListener('input',runBasis));
+$('bsSeed').onclick=()=>{ bsSeed=(Math.random()*1e9)|0; runBasis(); };
+
+resetSim(); setBtns(); runLab(); runCmp(); runBasis();
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{ updateCharts(); runLab(); runCmp(); runBasis(); });
+})();
+</script>
+</body>
+</html>

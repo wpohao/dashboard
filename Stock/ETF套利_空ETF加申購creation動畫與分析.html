@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ETF 套利：空 ETF＋買現貨＋申購（Creation）／買 ETF＋買回（Redemption）</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f4f3ef; --surface:#fcfcfb; --surface-2:#f0efea;
+  --text:#0b0b0b; --text-2:#52514e; --muted:#8a8984;
+  --grid:#e6e5e0; --axis:#c9c8c2; --border:#dcdbd6;
+  --etf:#eb6834; --bsk:#2a78d6; --cash:#eda100; --prem:#6250d6;
+  --up:#e34948; --down:#008300;
+  --up-soft:rgba(227,73,72,.16); --down-soft:rgba(0,131,0,.14); --band:rgba(42,120,214,.12);
+  --accent-soft:#fdf0ea;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    color-scheme: dark;
+    --bg:#121211; --surface:#1a1a19; --surface-2:#232321;
+    --text:#f0efec; --text-2:#c3c2b7; --muted:#8f8e86;
+    --grid:#2c2c2a; --axis:#46453f; --border:#3a3936;
+    --etf:#d95926; --bsk:#3987e5; --cash:#c98500; --prem:#9085e9;
+    --up:#e66767; --down:#0ca30c;
+    --up-soft:rgba(230,103,103,.18); --down-soft:rgba(12,163,12,.18); --band:rgba(57,135,229,.16);
+    --accent-soft:#2a1d17;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:"Noto Sans TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;line-height:1.75;font-size:16px}
+.wrap{max-width:1040px;margin:0 auto;padding:32px 20px 80px}
+h1{font-size:1.9rem;line-height:1.35;margin:0 0 .4rem}
+h2{font-size:1.4rem;margin:3rem 0 .6rem;padding-top:.4rem;border-top:1px solid var(--border)}
+h3{font-size:1.12rem;margin:1.8rem 0 .4rem}
+p{margin:.5rem 0}
+.sub{color:var(--text-2);margin:0 0 1.2rem}
+.xnav{font-size:.88rem;color:var(--text-2);margin-bottom:10px}
+.xnav a{color:var(--bsk)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin:14px 0}
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.hero h3{margin:0 0 .3rem}
+.hl{background:var(--accent-soft);padding:0 .25em;border-radius:4px}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0;padding:0;list-style:none}
+.toc a{display:inline-block;padding:4px 12px;border:1px solid var(--border);border-radius:999px;color:var(--text-2);text-decoration:none;font-size:.9rem;background:var(--surface)}
+.toc a:hover{color:var(--text);border-color:var(--text-2)}
+.eq{font-family:"Cambria Math","Times New Roman",serif;font-size:1.1rem;background:var(--surface-2);
+  border-left:3px solid var(--etf);padding:10px 14px;margin:10px 0;border-radius:0 8px 8px 0;overflow-x:auto;white-space:nowrap}
+.eq .c{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;font-size:.88rem;color:var(--text-2);margin-left:1em}
+.note{color:var(--text-2);font-size:.92rem}
+.key{border-left:3px solid var(--bsk);background:var(--surface-2);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0}
+table{border-collapse:collapse;width:100%;font-size:.93rem;margin:8px 0}
+th,td{padding:7px 10px;border-bottom:1px solid var(--grid);text-align:right;font-variant-numeric:tabular-nums}
+th{color:var(--text-2);font-weight:600;border-bottom:1px solid var(--axis)}
+th:first-child,td:first-child,.l{text-align:left}
+tr.tot td{font-weight:700;border-top:1px solid var(--axis)}
+.upc{color:var(--up);font-weight:600}.dnc{color:var(--down);font-weight:600}.mut{color:var(--muted)}
+.controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin:4px 0 12px}
+.controls label{font-size:.9rem;color:var(--text-2);display:flex;align-items:center;gap:8px}
+select,input[type=number]{font:inherit;font-size:.9rem;padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text)}
+input[type=number]{width:100px;text-align:right}
+button{font:inherit;font-size:.92rem;padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer}
+button:hover{border-color:var(--text-2)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.primary{background:var(--etf);border-color:var(--etf);color:#fff}
+.flow{display:grid;grid-template-columns:1fr;gap:12px}
+.flow-side{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+#flowSvg{width:100%;max-width:800px;height:auto;display:block;margin:0 auto}
+.node rect{fill:var(--surface-2);stroke:var(--border);stroke-width:1.5;transition:stroke .3s,fill .3s}
+.node.on rect{stroke:var(--etf);stroke-width:2.5;fill:var(--accent-soft)}
+.node .t{font-size:15px;font-weight:700;fill:var(--text)}
+.node .s{font-size:13px;fill:var(--text-2)}
+.edge{stroke:var(--axis);stroke-width:1.5;stroke-dasharray:4 4}
+.tok text{font-size:12px;font-weight:700}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.steps li{border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:.86rem;color:var(--muted);background:var(--surface);transition:all .25s}
+.steps li.on{border-color:var(--etf);color:var(--text);background:var(--accent-soft);font-weight:600}
+.steps li.done{color:var(--text-2)}
+.caption{margin:12px 0;padding:10px 14px;border-radius:8px;background:var(--surface-2);min-height:3.2em;font-size:.95rem}
+.chart{position:relative}
+.chart svg{width:100%;height:auto;display:block;overflow:visible}
+.chart .grid{stroke:var(--grid);stroke-width:1}
+.chart .base{stroke:var(--axis);stroke-width:1}
+.chart .tick{fill:var(--muted);font-size:11px;font-family:inherit}
+.chart .xhair{stroke:var(--text-2);stroke-width:1;stroke-dasharray:3 3}
+.chart-title{font-weight:600;margin:14px 0 0}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.88rem;color:var(--text-2);margin:2px 0 4px}
+.legend i{display:inline-block;width:18px;height:0;border-top:2px solid;vertical-align:middle;margin-right:6px}
+.legend .box{display:inline-block;width:16px;height:10px;vertical-align:middle;margin-right:6px;border:1px dashed var(--bsk);background:var(--band)}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:8px 10px;font-size:.82rem;line-height:1.5;box-shadow:0 4px 14px rgba(0,0,0,.12);min-width:150px;z-index:5;white-space:nowrap}
+.tip .row{display:flex;justify-content:space-between;gap:14px}
+.tip .sw{display:inline-block;width:10px;height:2px;vertical-align:middle;margin-right:6px}
+.calc{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 18px}
+.calc label{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.9rem;color:var(--text-2)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}
+.stat{background:var(--surface-2);border-radius:10px;padding:10px 12px}
+.stat .k{font-size:.8rem;color:var(--text-2)}
+.stat .v{font-size:1.25rem;font-weight:700;font-variant-numeric:tabular-nums}
+.stat .s{font-size:.8rem;color:var(--text-2)}
+#bandSvg{width:100%;height:auto;display:block}
+@media (max-width:820px){.hero,.flow-side{grid-template-columns:1fr}.calc{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+@media print{*{print-color-adjust:exact !important;-webkit-print-color-adjust:exact !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="xnav">系列：<a href="正二槓桿ETF_持倉變化動畫與分析.html">正二槓桿 ETF</a>｜<a href="指數套利_期現貨套利動畫與分析.html">指數套利</a>｜<b>ETF 套利（空 ETF＋申購）</b></div>
+
+<h1>ETF 套利：空 ETF＋買現貨＋申購（Creation）<br>為什麼 ETF 價格會被「釘」在淨值附近</h1>
+<p class="sub">ETF 有兩個市場：投資人互相買賣的<b>次級市場</b>（交易所），以及只有參與券商能用一籃股票換 ETF 的<b>初級市場</b>（申購／買回）。兩個市場的價差，就是套利空間。本文的「空現貨＋creation」指的是：ETF 溢價時<b>借券賣出（放空）ETF、買進一籃成分股現貨、申購新 ETF 交付回補</b>。數字皆為教學用假設值，非投資建議。</p>
+
+<div class="card hero">
+  <div>
+    <h3 class="upc">溢價套利（Creation）</h3>
+    ETF 市價 &gt; 淨值（NAV）<br>
+    → <b>放空 ETF</b>（借券賣出，先把高價鎖住）<br>
+    → <b>買進一籃成分股</b>（用淨值的價格買到等值資產）<br>
+    → <b>申購</b>：股票交給投信，換回新 ETF<br>
+    → <b>用新 ETF 還券</b>，賺到 <span class="hl">市價 − 淨值 − 成本</span><br>
+    <span class="note">市場效果：ETF 流通單位增加、賣壓把價格壓回淨值</span>
+  </div>
+  <div>
+    <h3 class="dnc">折價套利（Redemption）</h3>
+    ETF 市價 &lt; 淨值<br>
+    → <b>買進 ETF</b>（便宜買到）<br>
+    → <b>放空一籃成分股</b>（借券賣出，鎖住淨值的價格）<br>
+    → <b>買回</b>：ETF 交給投信，換回一籃股票<br>
+    → <b>用股票還券</b>，賺到 <span class="hl">淨值 − 市價 − 成本</span><br>
+    <span class="note">市場效果：ETF 流通單位減少、買盤把價格推回淨值</span>
+  </div>
+</div>
+
+<ul class="toc">
+  <li><a href="#anim">① 申購／買回流程動畫</a></li>
+  <li><a href="#math">② 數學與無套利區間</a></li>
+  <li><a href="#calc">③ 套利計算器</a></li>
+  <li><a href="#sim">④ 溢價模擬：套利機制失靈會怎樣</a></li>
+  <li><a href="#why">⑤ 為什麼有時套不掉</a></li>
+  <li><a href="#take">⑥ 結論與三角關係</a></li>
+</ul>
+
+<!-- ============ 1. ANIMATION ============ -->
+<h2 id="anim">① 申購／買回流程動畫</h2>
+<p>假設 ETF 淨值 50.00 元，套利者一次操作 1,000 張（100 萬單位）。圖中橘色＝ETF、藍色＝一籃成分股、黃色＝現金。</p>
+<div class="card">
+  <div class="controls">
+    <label>情境
+      <select id="mode">
+        <option value="prem">溢價 +1%：空 ETF＋買現貨＋申購</option>
+        <option value="disc">折價 −1%：買 ETF＋空現貨＋買回</option>
+      </select>
+    </label>
+    <label>速度 <select id="spd"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select></label>
+    <button class="primary" id="play">▶ 播放全部</button>
+    <button id="next">下一步 ›</button>
+    <button id="reset">重置</button>
+  </div>
+  <div class="flow">
+    <svg id="flowSvg" viewBox="0 0 760 380" role="img" aria-label="ETF 申購買回資金與部位流向動畫">
+      <g id="edges"></g><g id="nodes"></g><g id="toks"></g>
+    </svg>
+    <div class="caption" id="cap" style="margin:0">按「▶ 播放全部」或「下一步 ›」。</div>
+    <div class="flow-side">
+      <ol class="steps" id="steps"></ol>
+      <table id="ledger" style="margin-top:0">
+        <thead><tr><th>套利者帳本</th><th>數量／金額</th></tr></thead><tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 2. MATH ============ -->
+<h2 id="math">② 數學：溢價、成本與無套利區間</h2>
+<h3>2.1 名詞</h3>
+<div class="eq">NAV（每單位淨值）= 基金資產總值 ÷ 流通單位數</div>
+<div class="eq">溢價率 π = ETF 市價 P ÷ NAV − 1<span class="c">盤中用投信公布的 iNAV（預估淨值）近似</span></div>
+
+<h3>2.2 溢價套利（空 ETF＋買現貨＋申購）的損益</h3>
+<p>每單位：</p>
+<div class="eq">賣出 ETF 得 P　−　買股票籃付 NAV　−　成本 C<sub>申購</sub>　=　(π − c<sub>申購</sub>) × NAV</div>
+<div class="eq">c<sub>申購</sub> = ETF 賣出手續費 + <b>ETF 證交稅 0.1%</b> + 股票買進手續費 + 申購手續費 + 借券費 + 滑價</div>
+<p><b>為什麼要「空」？</b>因為溢價是此刻的價格，申購拿到新 ETF 卻要等投信作業與交割（通常要一到兩個營業日）。如果等拿到 ETF 才賣，溢價可能早就消失。所以先<b>借券賣出</b>把價格鎖住，再用申購到的新單位還券。借券費就是鎖價的成本。</p>
+
+<h3>2.3 折價套利（買 ETF＋空現貨＋買回）的損益</h3>
+<div class="eq">賣出股票籃得 NAV　−　買進 ETF 付 P　−　成本 C<sub>買回</sub>　=　(−π − c<sub>買回</sub>) × NAV</div>
+<div class="eq">c<sub>買回</sub> = ETF 買進手續費 + 買回手續費 + 股票賣出手續費 + <b>股票證交稅 0.3%</b> + 借券費 + 滑價</div>
+
+<h3>2.4 無套利區間：而且是不對稱的</h3>
+<div class="eq">−c<sub>買回</sub> ≤ π ≤ +c<sub>申購</sub></div>
+<div class="key">溢價方向賣的是 ETF（證交稅 0.1%），折價方向賣的是股票（證交稅 0.3%）。所以台股國內成分股 ETF 的無套利區間通常<b>折價那一側比較寬</b>：小幅折價比小幅溢價更容易長時間存在（推論，實際還受各檔 ETF 的申購買回費率與是否為現金申購影響）。</div>
+
+<h3>2.5 供給會變的商品</h3>
+<p>一般股票的股數固定，需求暴增時只能靠價格上漲來平衡。ETF 的流通單位卻能靠申購和買回增減：</p>
+<div class="eq">需求 ↑ → 溢價 &gt; c<sub>申購</sub> → 套利者申購 → 流通單位 ↑ → 價格回到 NAV + c<sub>申購</sub> 以內</div>
+<p>所以 ETF 的價格長期由 NAV 決定，需求只會反映在<b>規模</b>上。這個機制失靈（例如暫停申購）時，ETF 就會像一般股票一樣，被需求推離淨值，見 ④ 模擬。</p>
+
+<h3>2.6 實物申購 vs 現金申購</h3>
+<table>
+  <thead><tr><th class="l">方式</th><th class="l">申購時交付</th><th class="l">對套利的影響</th></tr></thead>
+  <tbody>
+    <tr><td class="l">實物申購</td><td class="l">一籃成分股（＋少量現金差額）</td><td class="l">套利者自己買股票，成本與滑價自己掌控，就是動畫中的流程。</td></tr>
+    <tr><td class="l">現金申購</td><td class="l">現金（投信代為買進成分股）</td><td class="l">套利者不用自己買籃子，但投信建倉的成本與價格風險會反映在申購價或費用上；跨境 ETF、期貨型 ETF（例如正二）多屬這類。</td></tr>
+  </tbody>
+</table>
+<p class="note">申購／買回以「基數」為單位（通常是數百張以上），只有與投信簽約的參與券商（PD）能直接操作。一般投資人只能在次級市場買賣，或透過券商代為申購。各檔 ETF 的基數、費率、申購方式請以公開說明書為準。</p>
+
+<!-- ============ 3. CALC ============ -->
+<h2 id="calc">③ 套利計算器</h2>
+<div class="card" id="calcCard">
+  <div class="calc">
+    <label>預估淨值 iNAV <input type="number" id="cNav" value="50" step="0.01"></label>
+    <label>ETF 市價 P <input type="number" id="cP" value="50.5" step="0.01"></label>
+    <label>操作張數 <input type="number" id="cLots" value="1000" step="100"></label>
+    <label>股票手續費實收（%） <input type="number" id="cFs" value="0.05" step="0.01"></label>
+    <label>ETF 手續費實收（%） <input type="number" id="cFe" value="0.05" step="0.01"></label>
+    <label>股票證交稅（%） <input type="number" id="cTs" value="0.3" step="0.05"></label>
+    <label>ETF 證交稅（%） <input type="number" id="cTe" value="0.1" step="0.05"></label>
+    <label>申購手續費（%） <input type="number" id="cCr" value="0.05" step="0.01"></label>
+    <label>買回手續費（%） <input type="number" id="cRd" value="0.05" step="0.01"></label>
+    <label>借券費（年化 %） <input type="number" id="cB" value="1.0" step="0.1"></label>
+    <label>借券天數 <input type="number" id="cBd" value="3" step="1"></label>
+    <label>滑價（%） <input type="number" id="cSl" value="0.05" step="0.01"></label>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="k">溢價率 π</div><div class="v" id="oPi">—</div><div class="s" id="oPiS"></div></div>
+    <div class="stat"><div class="k">無套利區間</div><div class="v" id="oBand">—</div><div class="s">−c買回 ～ +c申購</div></div>
+    <div class="stat"><div class="k">可做的方向</div><div class="v" id="oDir">—</div><div class="s" id="oDirS"></div></div>
+    <div class="stat"><div class="k">淨利</div><div class="v" id="oPnl">—</div><div class="s" id="oPnlS"></div></div>
+  </div>
+  <svg id="bandSvg" viewBox="0 0 760 150" role="img" aria-label="ETF 無套利區間數線"></svg>
+  <table id="costTbl"><thead><tr><th>成本項目（% of NAV）</th><th>溢價套利（申購）</th><th>折價套利（買回）</th></tr></thead><tbody></tbody></table>
+  <p class="note">費率為可調整的假設值；④ 的溢價模擬會直接使用這裡算出的區間。</p>
+</div>
+
+<!-- ============ 4. SIM ============ -->
+<h2 id="sim">④ 溢價模擬：有套利者 vs 套利機制失靈</h2>
+<p>模擬 120 個交易日的投資人需求衝擊（第 40 天出現搶購潮、第 85 天出現恐慌賣壓）。套利機制正常時，溢價一碰到區間邊緣就被申購／買回壓回去，代價是流通單位數跟著變動；機制失靈時，價格就自由偏離淨值。</p>
+<div class="card">
+  <div class="controls">
+    <label>套利機制
+      <select id="simMode">
+        <option value="both">正常（可申購、可買回）</option>
+        <option value="nocreate">暫停申購（只能買回）</option>
+        <option value="none">完全失靈（不能申購也不能買回）</option>
+      </select>
+    </label>
+    <button id="simRe">🎲 換一組需求衝擊</button>
+  </div>
+  <div class="chart-title">溢價率（%）</div>
+  <div class="legend">
+    <span><i style="border-color:var(--prem)"></i>ETF 溢價率</span>
+    <span><span class="box"></span>無套利區間（來自 ③）</span>
+    <span><b style="color:var(--etf)">▲</b> 申購套利（空 ETF＋買現貨）</span>
+    <span><b style="color:var(--bsk)">▼</b> 買回套利（買 ETF＋空現貨）</span>
+  </div>
+  <div class="chart" id="chPrem"></div>
+  <div class="chart-title">ETF 流通單位（張）</div>
+  <div class="chart" id="chUnits"></div>
+  <p class="note" id="simNote"></p>
+</div>
+
+<!-- ============ 5. WHY ============ -->
+<h2 id="why">⑤ 為什麼溢價有時套不掉</h2>
+<table>
+  <thead><tr><th class="l">原因</th><th class="l">機制</th></tr></thead>
+  <tbody>
+    <tr><td class="l">暫停申購／額度用完</td><td class="l">投信可能因為規模上限、期貨部位限制、海外額度等原因暫停或限制申購，溢價那一側的套利管道就斷了。例如 2020 年油價崩跌期間，國內原油期貨 ETF 曾因申購受限而出現大幅溢價。</td></tr>
+    <tr><td class="l">iNAV 不準</td><td class="l">跨境 ETF 在海外市場收盤或休市時，iNAV 只是用期貨、匯率推估的數字，套利者不敢用它當作確定的錨，區間自然變寬。</td></tr>
+    <tr><td class="l">借券不到</td><td class="l">溢價套利要借 ETF、折價套利要借成分股，借不到就只能承擔交割時間差的價格風險。</td></tr>
+    <tr><td class="l">成分股漲跌停／停牌</td><td class="l">股票籃買不到或賣不掉，兩腿無法同時建立。</td></tr>
+    <tr><td class="l">期貨型 ETF 的特殊限制</td><td class="l">正二、原油、黃金等期貨型 ETF 申購後，投信要加碼期貨部位，可能受期貨部位上限與市場深度限制。</td></tr>
+    <tr><td class="l">極端行情的流動性</td><td class="l">波動劇烈時，造市商與套利者為了控制風險會拉寬報價或撤單，區間短暫擴大。</td></tr>
+  </tbody>
+</table>
+<div class="key"><b>對一般投資人的意義：</b>買 ETF 前先看「市價 vs iNAV」。在高溢價時買進，等於多付了套利者遲早會賺走的那一段：機制一恢復（例如恢復申購），溢價會很快被壓回去，那部分會直接變成虧損。</div>
+
+<!-- ============ 6. TAKEAWAY ============ -->
+<h2 id="take">⑥ 結論與三角關係</h2>
+<div class="card">
+  <ol>
+    <li><b>溢價套利 = 空 ETF＋買現貨＋申購</b>：先借券賣出 ETF 鎖住高價，買進一籃成分股申購新 ETF 來還券，賺 π − c<sub>申購</sub>。</li>
+    <li><b>折價套利 = 買 ETF＋空現貨＋買回</b>：買進便宜的 ETF，借券賣出成分股鎖價，買回換股票還券，賺 −π − c<sub>買回</sub>。</li>
+    <li><b>區間不對稱</b>：賣 ETF 0.1% 稅、賣股票 0.3% 稅，加上申購／買回費、借券費，台股 ETF 的折價側通常較寬。</li>
+    <li><b>ETF 的價格由 NAV 決定，需求反映在規模</b>：套利機制讓 ETF 成為「供給可以彈性調整」的商品，機制斷掉時才會出現大幅溢價。</li>
+    <li><b>三角關係</b>：
+      <ul>
+        <li>期貨 ↔ 成分股：<a href="指數套利_期現貨套利動畫與分析.html">指數套利</a>，用 F* = S(1+rT) − D 綁住。</li>
+        <li>ETF ↔ 成分股：本篇的申購／買回，用 NAV 綁住。</li>
+        <li>期貨 ↔ ETF：套利者常用 ETF 代替成分股籃子做期現貨套利（證交稅較低，但有追蹤誤差），三者形成套利網。</li>
+        <li><a href="正二槓桿ETF_持倉變化動畫與分析.html">正二</a>這類期貨型 ETF 被申購時，投信要加碼期貨部位；再加上每日收盤的再平衡，大漲日會同時出現「申購帶來的加碼」和「再平衡帶來的加碼」。</li>
+      </ul>
+    </li>
+  </ol>
+  <p class="note">本文為教育用途的機制說明。申購／買回作業時程、基數、費率、現金或實物申購方式，以及借券規則，請以各 ETF 公開說明書與交易所、券商最新規定為準；不構成任何投資建議。</p>
+</div>
+
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const ease = p => p<.5 ? 2*p*p : 1-Math.pow(-2*p+2,2)/2;
+const tween = (dur, fn) => new Promise(res => { const t0=performance.now(); const f=t=>{ const p=Math.min(1,(t-t0)/dur); fn(ease(p)); p<1?requestAnimationFrame(f):res(); }; requestAnimationFrame(f); });
+const f0 = v => Math.round(v).toLocaleString('zh-TW');
+const pc = (v,d=2) => (v>0?'+':v<0?'−':'') + Math.abs(v).toFixed(d) + '%';
+const wan = v => (v>0?'+':v<0?'−':'') + (Math.abs(v)/1e4).toLocaleString('zh-TW',{maximumFractionDigits:1}) + ' 萬';
+const clsOf = v => v>1e-9 ? 'upc' : v<-1e-9 ? 'dnc' : 'mut';
+
+/* ============ flow animation ============ */
+const NODES = {
+  MKT:{x:20,y:20,t:'交易所（次級市場）'},
+  FUND:{x:520,y:20,t:'投信：ETF 基金（初級市場）'},
+  ARB:{x:270,y:145,t:'套利者（參與券商 PD）'},
+  STK:{x:20,y:270,t:'股票市場：成分股'},
+  LEND:{x:520,y:270,t:'出借人（借券）'},
+};
+const W=220,H=90;
+const ctr = k => ({x:NODES[k].x+W/2, y:NODES[k].y+H/2});
+function buildFlow(){
+  let e='';
+  ['MKT','FUND','STK','LEND'].forEach(k=>{ const a=ctr('ARB'), b=ctr(k); e+=`<line class="edge" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`; });
+  $('edges').innerHTML=e;
+  $('nodes').innerHTML=Object.entries(NODES).map(([k,n])=>
+    `<g class="node" id="n${k}"><rect x="${n.x}" y="${n.y}" width="${W}" height="${H}" rx="12"/>`+
+    `<text class="t" x="${n.x+W/2}" y="${n.y+30}" text-anchor="middle">${n.t}</text>`+
+    `<text class="s" id="s${k}a" x="${n.x+W/2}" y="${n.y+54}" text-anchor="middle"></text>`+
+    `<text class="s" id="s${k}b" x="${n.x+W/2}" y="${n.y+72}" text-anchor="middle"></text></g>`).join('');
+}
+const KIND = { etf:['--etf','#fff'], bsk:['--bsk','#fff'], cash:['--cash','#1a1a19'] };
+async function moveTok(label, kind, from, to, side, dur){
+  const a=ctr(from), b=ctr(to), dx=b.x-a.x, dy=b.y-a.y, L=Math.hypot(dx,dy), ox=-dy/L*14*side, oy=dx/L*14*side;
+  const w=label.length*11+22;
+  const g=document.createElementNS('http://www.w3.org/2000/svg','g'); g.setAttribute('class','tok');
+  g.innerHTML=`<rect x="${-w/2}" y="-13" width="${w}" height="26" rx="13" fill="${css(KIND[kind][0])}" stroke="${css('--surface')}" stroke-width="2"/><text text-anchor="middle" y="4.5" fill="${KIND[kind][1]}">${label}</text>`;
+  $('toks').appendChild(g);
+  await tween(dur, p=>{ const k=p; g.setAttribute('transform',`translate(${a.x+dx*k+ox},${a.y+dy*k+oy})`); g.setAttribute('opacity', p>0.92? (1-p)/0.08 : 1); });
+  g.remove();
+}
+const NAV=50, LOTS=1000, UNITS=LOTS*1000;
+let L, FUNDU, stepIdx=-1, busy=false, playing=false;
+const SC = {
+  prem:{ P:50.5, steps:[
+    {t:'① 發現溢價', run:async()=>{ hi('MKT'); cap(`<b>① 發現溢價</b>：ETF 市價 <b>50.50</b>，投信公布的 iNAV <b>50.00</b>，溢價 <span class="upc">+1.00%</span>。1,000 張的價差 = 0.50 × 100 萬單位 = <b>50 萬元</b>（未扣成本）。`); }},
+    {t:'② 借入 ETF（準備放空）', run:async d=>{ hi('LEND'); cap(`<b>② 借券</b>：先向出借人借入 1,000 張 ETF。手上還沒有 ETF，又想用現在的高價賣出，就得先借。`); await moveTok('ETF 1,000張','etf','LEND','ARB',1,d); L.etf+=LOTS; L.loanE+=LOTS; }},
+    {t:'③ 賣出 ETF @ 50.50', run:async d=>{ hi('MKT'); cap(`<b>③ 放空 ETF</b>：在交易所賣出 1,000 張 @ 50.50，收到 5,050 萬元，把溢價價格鎖住。`); await Promise.all([moveTok('ETF 1,000張','etf','ARB','MKT',1,d), moveTok('+$5,050萬','cash','MKT','ARB',1,d)]); L.etf-=LOTS; L.cash+=50.5*UNITS; }},
+    {t:'④ 買進一籃成分股 @ NAV', run:async d=>{ hi('STK'); cap(`<b>④ 買現貨</b>：同時在股票市場按權重買進一籃成分股，總值等於 1,000 張 ETF 的淨值 = 5,000 萬元。`); await Promise.all([moveTok('−$5,000萬','cash','ARB','STK',1,d), moveTok('股票籃','bsk','STK','ARB',1,d)]); L.cash-=NAV*UNITS; L.bsk+=1; }},
+    {t:'⑤ 申購（Creation）', run:async d=>{ hi('FUND'); cap(`<b>⑤ 申購</b>：把股票籃（＋少量現金差額）交給投信。投信發行 1,000 張<b>新的</b> ETF 給套利者，基金流通單位增加。`); await Promise.all([moveTok('股票籃','bsk','ARB','FUND',1,d), moveTok('新ETF 1,000張','etf','FUND','ARB',1,d)]); L.bsk-=1; L.etf+=LOTS; FUNDU+=LOTS; fundTxt(); }},
+    {t:'⑥ 還券，部位歸零', run:async d=>{ hi('LEND'); cap(`<b>⑥ 還券</b>：用申購拿到的新 ETF 還給出借人。ETF、股票、借券全部歸零，只剩下現金 <span class="upc">+50 萬元</span>（扣成本前）。整個過程沒有承擔市場方向風險。`); await moveTok('ETF 1,000張','etf','ARB','LEND',1,d); L.etf-=LOTS; L.loanE-=LOTS; }},
+    {t:'⑦ 市場效果：溢價被壓回', run:async d=>{ hi('MKT'); cap(`<b>⑦ 市場效果</b>：交易所多了 1,000 張賣壓，基金多了 1,000 張流通單位，<b>需求被「新供給」吸收</b>，溢價回到區間內。只要溢價還大於成本，套利者就會繼續做，直到賺不到為止。`); await tween(d*1.5,p=>{ const pr=1-0.9*p; $('sMKTa').textContent=`市價 ${(50+0.5*(1-0.9*p)).toFixed(2)}｜iNAV 50.00`; $('sMKTb').textContent=`溢價 ${pc(pr)}`; }); }},
+  ]},
+  disc:{ P:49.5, steps:[
+    {t:'① 發現折價', run:async()=>{ hi('MKT'); cap(`<b>① 發現折價</b>：ETF 市價 <b>49.50</b>，iNAV <b>50.00</b>，折價 <span class="dnc">−1.00%</span>。1,000 張的價差 = 50 萬元（未扣成本）。`); }},
+    {t:'② 買進 ETF @ 49.50', run:async d=>{ hi('MKT'); cap(`<b>② 買進 ETF</b>：在交易所買進 1,000 張 @ 49.50，付出 4,950 萬元。`); await Promise.all([moveTok('−$4,950萬','cash','ARB','MKT',1,d), moveTok('ETF 1,000張','etf','MKT','ARB',1,d)]); L.cash-=49.5*UNITS; L.etf+=LOTS; }},
+    {t:'③ 借入股票籃（準備放空）', run:async d=>{ hi('LEND'); cap(`<b>③ 借券</b>：向出借人借入一籃成分股。買回要等作業時間，先借券賣出才能把淨值的價格鎖住。`); await moveTok('股票籃','bsk','LEND','ARB',1,d); L.bsk+=1; L.loanB+=1; }},
+    {t:'④ 賣出股票籃 @ NAV', run:async d=>{ hi('STK'); cap(`<b>④ 放空現貨</b>：在股票市場賣出這籃股票，收到 5,000 萬元（要付 0.3% 證交稅，這是折價套利比較貴的原因）。`); await Promise.all([moveTok('股票籃','bsk','ARB','STK',1,d), moveTok('+$5,000萬','cash','STK','ARB',1,d)]); L.bsk-=1; L.cash+=NAV*UNITS; }},
+    {t:'⑤ 買回（Redemption）', run:async d=>{ hi('FUND'); cap(`<b>⑤ 買回</b>：把 1,000 張 ETF 交給投信，換回對應的一籃成分股。這 1,000 張 ETF 被註銷，基金流通單位減少。`); await Promise.all([moveTok('ETF 1,000張','etf','ARB','FUND',1,d), moveTok('股票籃','bsk','FUND','ARB',1,d)]); L.etf-=LOTS; L.bsk+=1; FUNDU-=LOTS; fundTxt(); }},
+    {t:'⑥ 還券，部位歸零', run:async d=>{ hi('LEND'); cap(`<b>⑥ 還券</b>：用買回拿到的股票籃還給出借人。部位全部歸零，剩下現金 <span class="upc">+50 萬元</span>（扣成本前）。`); await moveTok('股票籃','bsk','ARB','LEND',1,d); L.bsk-=1; L.loanB-=1; }},
+    {t:'⑦ 市場效果：折價被拉回', run:async d=>{ hi('MKT'); cap(`<b>⑦ 市場效果</b>：交易所多了 1,000 張買盤，基金少了 1,000 張流通單位，折價回到區間內。`); await tween(d*1.5,p=>{ const pr=-(1-0.9*p); $('sMKTa').textContent=`市價 ${(50-0.5*(1-0.9*p)).toFixed(2)}｜iNAV 50.00`; $('sMKTb').textContent=`溢價 ${pc(pr)}`; }); }},
+  ]},
+};
+function hi(k){ document.querySelectorAll('.node').forEach(n=>n.classList.toggle('on', n.id==='n'+k)); }
+function cap(h){ $('cap').innerHTML=h; }
+function fundTxt(){ $('sFUNDa').textContent=`流通單位 ${f0(FUNDU)} 張`; $('sFUNDb').textContent=`NAV 50.00`; }
+function ledger(){
+  const rows=[
+    ['ETF 部位', `${L.etf>0?'+':''}${f0(L.etf)} 張`, L.etf],
+    ['股票籃部位', `${L.bsk>0?'+':''}${L.bsk} 籃`, L.bsk],
+    ['借券負債', L.loanE? `欠 ETF ${f0(L.loanE)} 張` : L.loanB? `欠股票籃 ${L.loanB} 籃` : '無', -(L.loanE||L.loanB)],
+    ['現金', wan(L.cash)+'元', L.cash],
+  ];
+  $('ledger').querySelector('tbody').innerHTML = rows.map(r=>`<tr><td>${r[0]}</td><td class="${clsOf(r[2])}">${r[1]}</td></tr>`).join('');
+}
+function resetFlow(){
+  playing=false; busy=false; stepIdx=-1; L={etf:0,bsk:0,loanE:0,loanB:0,cash:0}; FUNDU=100000;
+  $('toks').innerHTML='';
+  const sc=SC[$('mode').value], pr=(sc.P/NAV-1)*100;
+  $('sMKTa').textContent=`市價 ${sc.P.toFixed(2)}｜iNAV 50.00`; $('sMKTb').textContent=`溢價 ${pc(pr)}`;
+  fundTxt(); $('sARBa').textContent='操作規模 1,000 張'; $('sARBb').textContent='＝100 萬單位';
+  $('sSTKa').textContent='依權重買賣一籃股票'; $('sSTKb').textContent='1 籃 ≈ 1,000 張 ETF 的淨值';
+  $('sLENDa').textContent='出借 ETF 或成分股'; $('sLENDb').textContent='收取借券費';
+  $('steps').innerHTML=sc.steps.map(s=>`<li>${s.t}</li>`).join('');
+  hi(''); ledger(); cap('按「▶ 播放全部」或「下一步 ›」。'); btns();
+}
+function markSteps(){ [...$('steps').children].forEach((li,i)=>li.className=i<stepIdx?'done':i===stepIdx?'on':''); }
+function btns(){ const n=SC[$('mode').value].steps.length; $('next').disabled=busy||stepIdx>=n-1; $('play').textContent=playing?'⏸ 暫停':'▶ 播放全部'; }
+async function nextStep(){
+  const sc=SC[$('mode').value]; if(busy||stepIdx>=sc.steps.length-1) return;
+  busy=true; stepIdx++; markSteps(); btns();
+  await sc.steps[stepIdx].run(1300/+$('spd').value);
+  ledger(); busy=false; btns();
+}
+$('next').onclick=nextStep;
+$('play').onclick=async()=>{
+  if(playing){ playing=false; btns(); return; }
+  if(stepIdx>=SC[$('mode').value].steps.length-1) resetFlow();
+  playing=true; btns();
+  while(playing && stepIdx<SC[$('mode').value].steps.length-1){ await nextStep(); if(playing) await sleep(1400/+$('spd').value); }
+  playing=false; btns();
+};
+$('reset').onclick=resetFlow; $('mode').onchange=resetFlow;
+
+/* ============ chart helper ============ */
+function niceTicks(min,max,count){ const span=max-min||1,s0=span/count,mag=Math.pow(10,Math.floor(Math.log10(s0))),e=s0/mag; const step=(e>=7.5?10:e>=3.5?5:e>=1.5?2:1)*mag,out=[]; for(let v=Math.ceil(min/step)*step;v<=max+1e-9;v+=step)out.push(+v.toFixed(8)); return out; }
+function lineChart(host,cfg){
+  const VW=760,VH=cfg.h||220,m={l:62,r:14,t:12,b:26},n=cfg.series[0].values.length;
+  let lo=Infinity,hi=-Infinity; cfg.series.forEach(s=>s.values.forEach(v=>{if(v<lo)lo=v;if(v>hi)hi=v;}));
+  if(cfg.band){lo=Math.min(lo,cfg.band.lo);hi=Math.max(hi,cfg.band.hi);}
+  if(cfg.ref!=null){lo=Math.min(lo,cfg.ref);hi=Math.max(hi,cfg.ref);}
+  const pad=(hi-lo)*0.1||1; lo-=pad; hi+=pad;
+  const iw=VW-m.l-m.r,ih=VH-m.t-m.b,X=i=>m.l+i*iw/(n-1),Y=v=>m.t+(hi-v)/(hi-lo)*ih;
+  let s=`<svg viewBox="0 0 ${VW} ${VH}" role="img" aria-label="${cfg.label}">`;
+  if(cfg.band) s+=`<rect x="${m.l}" y="${Y(cfg.band.hi)}" width="${iw}" height="${Y(cfg.band.lo)-Y(cfg.band.hi)}" fill="${css('--band')}"/><line x1="${m.l}" x2="${VW-m.r}" y1="${Y(cfg.band.hi)}" y2="${Y(cfg.band.hi)}" stroke="${css('--bsk')}" stroke-dasharray="4 3"/><line x1="${m.l}" x2="${VW-m.r}" y1="${Y(cfg.band.lo)}" y2="${Y(cfg.band.lo)}" stroke="${css('--bsk')}" stroke-dasharray="4 3"/>`;
+  niceTicks(lo,hi,4).forEach(t=>{ s+=`<line class="grid" x1="${m.l}" x2="${VW-m.r}" y1="${Y(t)}" y2="${Y(t)}"/><text class="tick" x="${m.l-8}" y="${Y(t)+4}" text-anchor="end">${cfg.yfmt(t)}</text>`; });
+  if(cfg.ref!=null) s+=`<line class="base" x1="${m.l}" x2="${VW-m.r}" y1="${Y(cfg.ref)}" y2="${Y(cfg.ref)}"/>`;
+  niceTicks(0,n-1,6).filter(Number.isInteger).forEach(t=>{ s+=`<text class="tick" x="${X(t)}" y="${VH-8}" text-anchor="middle">第${t}天</text>`; });
+  cfg.series.forEach(se=>{ const d=se.values.map((v,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(''); s+=`<path d="${d}" fill="none" stroke="${se.color}" stroke-width="2" stroke-linejoin="round" ${se.step?'':'stroke-linecap="round"'}/>`; });
+  (cfg.markers||[]).forEach(mk=>{ const x=X(mk.i),y=Y(mk.v),z=mk.size; const d=mk.up?`M${x},${y-z} L${x+z*.9},${y+z*.6} L${x-z*.9},${y+z*.6} Z`:`M${x},${y+z} L${x+z*.9},${y-z*.6} L${x-z*.9},${y-z*.6} Z`; s+=`<path d="${d}" fill="${mk.color}" stroke="${css('--surface')}" stroke-width="1.5" stroke-linejoin="round"/>`; });
+  s+=`<g class="hov" style="display:none"><line class="xhair" y1="${m.t}" y2="${VH-m.b}"/>`+cfg.series.map(se=>`<circle r="4.5" fill="${se.color}" stroke="${css('--surface')}" stroke-width="2"/>`).join('')+`</g><rect x="${m.l-6}" y="0" width="${iw+12}" height="${VH}" fill="transparent"/></svg><div class="tip" hidden></div>`;
+  host.innerHTML=s;
+  const svg=host.querySelector('svg'),hov=svg.querySelector('.hov'),tip=host.querySelector('.tip'),line=hov.querySelector('line'),dots=hov.querySelectorAll('circle');
+  svg.addEventListener('pointermove',e=>{ const r=svg.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*VW,i=Math.max(0,Math.min(n-1,Math.round((vx-m.l)/iw*(n-1))));
+    hov.style.display=''; line.setAttribute('x1',X(i)); line.setAttribute('x2',X(i));
+    cfg.series.forEach((se,k)=>{dots[k].setAttribute('cx',X(i));dots[k].setAttribute('cy',Y(se.values[i]));});
+    tip.hidden=false; tip.innerHTML=cfg.tip(i); const px=X(i)/VW*r.width,tw=tip.offsetWidth; tip.style.left=(px+14+tw>r.width?px-14-tw:px+14)+'px'; tip.style.top='6px'; });
+  svg.addEventListener('pointerleave',()=>{hov.style.display='none';tip.hidden=true;});
+}
+
+/* ============ calculator ============ */
+let BAND={lo:-0.5,hi:0.3};
+function calc(){
+  const v=id=>+$(id).value||0;
+  const nav=v('cNav')||1, P=v('cP'), lots=v('cLots'), fs=v('cFs'), fe=v('cFe'), ts=v('cTs'), te=v('cTe'), cr=v('cCr'), rd=v('cRd'), b=v('cB'), bd=v('cBd'), sl=v('cSl');
+  const borrow=b*bd/365;
+  const cItems=[['ETF 手續費',fe,fe],['證交稅（溢價賣 ETF／折價賣股票）',te,ts],['股票手續費',fs,fs],['申購／買回手續費',cr,rd],['借券費（借 ETF／借股票）',borrow,borrow],['滑價',sl,sl]];
+  const Cc=cItems.reduce((s,x)=>s+x[1],0), Cr=cItems.reduce((s,x)=>s+x[2],0);
+  const pi=(P/nav-1)*100, notional=lots*1000*nav;
+  BAND={lo:-Cr,hi:Cc};
+  $('oPi').innerHTML=`<span class="${clsOf(pi)}">${pc(pi,3)}</span>`; $('oPiS').textContent=`市價 − 淨值 = ${(P-nav).toFixed(3)} 元`;
+  $('oBand').textContent=`${pc(-Cr,2)} ～ ${pc(Cc,2)}`;
+  let dir, pnl;
+  if(pi>Cc){ dir='<span class="upc">溢價套利</span>'; pnl=(pi-Cc)/100*notional; $('oDirS').textContent='空 ETF＋買現貨＋申購'; }
+  else if(pi<-Cr){ dir='<span class="dnc">折價套利</span>'; pnl=(-pi-Cr)/100*notional; $('oDirS').textContent='買 ETF＋空現貨＋買回'; }
+  else { dir='<span class="mut">不動</span>'; pnl=0; $('oDirS').textContent='價格在區間內，套利不划算'; }
+  $('oDir').innerHTML=dir;
+  $('oPnl').innerHTML=pnl>0?`<span class="upc">+${f0(pnl)} 元</span>`:'<span class="mut">0</span>';
+  $('oPnlS').textContent=pnl>0?`規模 ${f0(notional/1e4)} 萬元，淨報酬 ${(pnl/notional*100).toFixed(3)}%`:`差距最近的邊界：${pi>=0?(Cc-pi).toFixed(3):(Cr+pi).toFixed(3)}%`;
+  $('costTbl').querySelector('tbody').innerHTML=cItems.map(x=>`<tr><td>${x[0]}</td><td>${x[1].toFixed(3)}%</td><td>${x[2].toFixed(3)}%</td></tr>`).join('')+`<tr class="tot"><td>合計 c</td><td>${Cc.toFixed(3)}%</td><td>${Cr.toFixed(3)}%</td></tr>`;
+  // number line
+  const span=Math.max(Cc,Cr,Math.abs(pi))*1.5+0.1, VW=760, X=x=>30+(x+span)/(2*span)*(VW-60), cl=x=>Math.max(30,Math.min(VW-30,X(x)));
+  let s=`<line x1="30" x2="${VW-30}" y1="80" y2="80" stroke="${css('--axis')}"/>`;
+  s+=`<rect x="${X(-Cr)}" y="62" width="${X(Cc)-X(-Cr)}" height="36" rx="4" fill="${css('--band')}" stroke="${css('--bsk')}" stroke-dasharray="4 3"/>`;
+  s+=`<text x="${(X(-Cr)+X(Cc))/2}" y="56" text-anchor="middle" font-size="12" fill="${css('--text-2')}">無套利區間</text>`;
+  s+=`<text x="${X(-Cr)-6}" y="56" text-anchor="end" font-size="12" fill="${css('--down')}">◀ 折價套利（買回）</text><text x="${X(Cc)+6}" y="56" font-size="12" fill="${css('--up')}">溢價套利（申購）▶</text>`;
+  [[-Cr,'−c買回'],[0,'NAV'],[Cc,'+c申購']].forEach(([x,l])=>{ s+=`<line x1="${X(x)}" x2="${X(x)}" y1="62" y2="98" stroke="${css('--text-2')}"/><text x="${X(x)}" y="116" text-anchor="middle" font-size="11" fill="${css('--text-2')}">${l}</text><text x="${X(x)}" y="131" text-anchor="middle" font-size="11" fill="${css('--muted')}">${pc(x,2)}</text>`; });
+  s+=`<circle cx="${cl(pi)}" cy="80" r="7" fill="${css('--prem')}" stroke="${css('--surface')}" stroke-width="2"/><text x="${cl(pi)}" y="30" text-anchor="middle" font-size="12" font-weight="700" fill="${css('--text')}">目前溢價 ${pc(pi,2)}</text>`;
+  $('bandSvg').innerHTML=s;
+  runSim();
+}
+document.querySelectorAll('#calcCard input').forEach(el=>el.addEventListener('input',calc));
+
+/* ============ premium simulation ============ */
+let simSeed=42;
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function runSim(){
+  const mode=$('simMode').value, g=rng(simSeed), gs=()=>{let u=0,v=0;while(!u)u=g();while(!v)v=g();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);};
+  const N=120, P=[0], U=[100000], mk=[], canC=mode==='both', canR=mode!=='none';
+  let p=0, d=0;
+  for(let t=1;t<N;t++){
+    d = 0.9*d + 0.12*gs() + (t>=40&&t<48?0.55:0) + (t>=85&&t<91?-0.6:0);
+    p = 0.75*p + d*0.35 + 0.08*gs();
+    let u=U[t-1];
+    if(canC && p>BAND.hi){ const x=p-BAND.hi; u+=Math.round(x*2500); mk.push({i:t,v:BAND.hi+x*0.15,up:true,size:4+Math.min(6,x*6),color:css('--etf')}); p=BAND.hi+x*0.15; }
+    else if(canR && p<BAND.lo){ const x=BAND.lo-p; u-=Math.round(x*2500); mk.push({i:t,v:BAND.lo-x*0.15,up:false,size:4+Math.min(6,x*6),color:css('--bsk')}); p=BAND.lo-x*0.15; }
+    P.push(p); U.push(u);
+  }
+  lineChart($('chPrem'),{label:'ETF 溢價率模擬',h:240,ref:0,band:BAND,series:[{color:css('--prem'),values:P}],markers:mk,yfmt:t=>t.toFixed(1)+'%',
+    tip:i=>`<b>第 ${i} 天</b><div class="row"><span><span class="sw" style="background:${css('--prem')}"></span>溢價率</span><b>${pc(P[i])}</b></div><div class="row"><span>流通單位</span><b>${f0(U[i])} 張</b></div>`+
+      ((m=>m?`<div class="row"><span>套利</span><b>${m.up?'▲ 申購 '+f0(U[i]-U[i-1]):'▼ 買回 '+f0(U[i-1]-U[i])} 張</b></div>`:'')(mk.find(m=>m.i===i)))});
+  lineChart($('chUnits'),{label:'ETF 流通單位',h:170,series:[{color:css('--etf'),values:U}],yfmt:t=>f0(t),
+    tip:i=>`<b>第 ${i} 天</b><div class="row"><span>流通單位</span><b>${f0(U[i])} 張</b></div>`});
+  const maxP=Math.max(...P), minP=Math.min(...P), nC=mk.filter(m=>m.up).length, nR=mk.length-nC;
+  $('simNote').textContent = mode==='both'
+    ? `套利機制正常：溢價最高 ${pc(maxP)}、最低 ${pc(minP)}，幾乎都被釘在區間內。代價是流通單位從 100,000 張變成 ${f0(U[N-1])} 張（申購 ${nC} 次、買回 ${nR} 次）：需求反映在規模，而不是價格。`
+    : mode==='nocreate'
+    ? `暫停申購：搶購潮來時沒有新供給，溢價衝到 ${pc(maxP)}；折價那一側仍有買回機制撐住（最低 ${pc(minP)}）。在高溢價時追進的人，等於買在「恢復申購就會消失」的價格上。`
+    : `完全失靈：ETF 變成一般股票，溢價在 ${pc(minP)} ～ ${pc(maxP)} 之間自由漂移，流通單位固定不變。`;
+}
+$('simMode').onchange=runSim;
+$('simRe').onclick=()=>{ simSeed=(Math.random()*1e9)|0; runSim(); };
+
+buildFlow(); resetFlow(); calc();
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>calc());
+})();
+</script>
+</body>
+</html>
