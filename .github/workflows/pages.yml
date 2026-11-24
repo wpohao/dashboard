@@ -23,13 +23,13 @@ jobs:
     env:
       TZ: Asia/Taipei
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0          # 需要完整歷史，才能用 commit 時間當「更新日期」
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Build public dashboard (index.html)
         run: node _dashboard/build.js --public --git-dates
@@ -39,13 +39,12 @@ jobs:
           mkdir -p _site
           cp index.html _site/
           cp -r Stock _site/
-          touch _site/.nojekyll
 
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
