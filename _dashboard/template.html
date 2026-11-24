@@ -71,6 +71,8 @@ h2.sec{font-size:1.1rem;margin:28px 0 10px}
 .btn{font:inherit;font-size:.82rem;padding:5px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);text-decoration:none;text-align:center;cursor:pointer;white-space:nowrap}
 .btn:hover{border-color:var(--text-2)}
 .btn.pri{background:var(--c,var(--accent));border-color:var(--c,var(--accent));color:#fff}
+.item .ext{font-weight:400;color:var(--muted);font-size:.9rem}
+.item .badge{border:1px solid var(--border);border-radius:999px;padding:0 8px;color:var(--text-2)}
 mark{background:var(--mark);color:inherit;border-radius:3px;padding:0 1px}
 .pager{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:16px 0 0}
 .pg{font:inherit;font-size:.86rem;min-width:36px;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer}
@@ -192,6 +194,15 @@ function describeQuery(n, scope) {
 
 /* ---------- 畫面 ---------- */
 function itemHtml(a, showTopic) {
+  if (a.external) {
+    const tp = showTopic ? `<span class="tp">${esc(a.topic.icon)} ${esc(a.topic.name)}</span>` : '';
+    return `<article class="item" style="--c:${a.topic.color}">
+      <div><a class="t" href="${esc(a.href)}" target="_blank" rel="noopener">${hl(a.title)} <span class="ext">↗</span></a></div>
+      ${a.desc ? `<div class="d">${hl(a.desc)}</div>` : ''}
+      <div class="m">${tp}<span class="badge">🔗 外部網站</span><span>${esc(a.note)}</span><span>➕ 加入 ${a.updated}</span></div>
+      <div class="acts"><a class="btn pri" href="${esc(a.href)}" target="_blank" rel="noopener">開啟網站 ↗</a></div>
+    </article>`;
+  }
   const m = [];
   if (showTopic) m.push(`<span class="tp">${esc(a.topic.icon)} ${esc(a.topic.name)}</span>`);
   if (a.eventDate) m.push(`<span>📅 行程 ${a.eventDate}</span>`);

@@ -15,7 +15,14 @@
       "public": true,
       "sources": [
         { "type": "files", "dir": "Stock" },
-        { "type": "file", "path": "../Wheel輪轉策略.html", "localOnly": true }
+        { "type": "file", "path": "../Wheel輪轉策略.html", "localOnly": true },
+        {
+          "type": "link",
+          "url": "https://mis.twse.com.tw/stock/various-areas/etf-price/indicator-disclosure-etf?lang=zhHant",
+          "title": "臺灣證券交易所｜ETF 發行單位變動及淨值揭露專區",
+          "desc": "每 15 秒更新各檔 ETF 的已發行單位數、與前日單位差異數、成交價、投信預估淨值（iNAV）與預估折溢價幅度。單位數增減就是申購／買回的結果，折溢價就是 ETF 套利的訊號，可搭配「ETF 套利」一文對照。",
+          "added": "2026-11-24"
+        }
       ]
     },
     {

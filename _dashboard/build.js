@@ -10,6 +10,7 @@
  *   { "type": "files",      "dir": "Stock" }                              資料夾第一層的 .html，每個檔案一篇
  *   { "type": "file",       "path": "xxx.html" }                          單一檔案
  *   { "type": "subfolders", "dir": "../旅遊計畫", "entry": "行程規劃.html" } 每個子資料夾一篇；同名 .pdf/.md 附連結
+ *   { "type": "link", "url": "https://…", "title": "…", "desc": "…", "added": "2026-11-24" }  外部網站連結
  *
  * 主題的 "public": true 才會出現在公開版；來源加 "localOnly": true 則該來源的文章只出現在本機版。
  * 公開版只能引用 repo 內的檔案（否則直接報錯中止）。
@@ -97,7 +98,14 @@ function tripDate(name) {
 }
 function collect(src) {
   const out = [];
-  if (src.type === 'file') {
+  if (src.type === 'link') {
+    // 外部網站：不掃描檔案，標題／摘要／加入日期都寫在 topics.json
+    const ms = Date.parse(src.added || '') || Date.now();
+    let host = '';
+    try { host = new URL(src.url).hostname; } catch { console.warn(`  ! 連結格式錯誤：${src.url}（略過）`); return out; }
+    out.push({ abs: null, url: src.url, title: src.title || host, desc: clip(src.desc || '', 200), note: host,
+      sections: 0, alts: [], mtime: ms, updated: ymd(new Date(ms)), eventDate: '' });
+  } else if (src.type === 'file') {
     const abs = path.resolve(ROOT, src.path);
     if (exists(abs)) out.push(articleFromFile(abs));
     else console.warn(`  ! 找不到檔案：${src.path}（略過）`);
@@ -131,7 +139,7 @@ const scanned = cfg.topics
     const articles = t.sources
       .filter(s => needAll || !s.localOnly)             // 只產公開版時，localOnly 來源也不掃
       .flatMap(s => collect(s).map(a => ({ ...a, localOnly: !!s.localOnly || t.public !== true })))
-      .filter(a => !seen.has(a.abs) && seen.add(a.abs));
+      .filter(a => { const k = a.abs || a.url; return !seen.has(k) && seen.add(k); });
     articles.sort((a, b) => b.mtime - a.mtime);
     console.log(`  ${t.icon || '•'} ${t.name}${t.public ? '（公開）' : '（僅本機）'}：${articles.length} 篇`);
     return { ...t, articles };
@@ -148,6 +156,8 @@ for (const o of outputs) {
   const isPublic = o.scope === 'public';
   const topics = scanned.filter(t => !isPublic || t.public === true).map(t => {
     const articles = t.articles.filter(a => !isPublic || !a.localOnly).map(a => {
+      if (a.url) return { title: a.title, desc: a.desc, note: a.note, sections: 0, path: a.url, href: a.url,
+        alts: [], mtime: a.mtime, updated: a.updated, eventDate: '', external: true };
       if (isPublic && !insideRepo(a.abs)) throw new Error(`公開版不能引用 repo 以外的檔案：${a.abs}`);
       return {
         title: a.title, desc: a.desc, note: a.note, sections: a.sections,
