@@ -1,0 +1,33 @@
+{
+  "title": "我的知識庫",
+  "subtitle": "依主題整理的文章、分析與計畫",
+  "outputs": [
+    { "file": "../dashboard.html", "scope": "all",    "note": "本機版：全部主題，放在 MyGithub 根目錄（不進 git）" },
+    { "file": "index.html",        "scope": "public", "note": "公開版：只有 public 主題，GitHub Pages 首頁（由 Actions 產生）" }
+  ],
+  "topics": [
+    {
+      "id": "stock",
+      "name": "Stock",
+      "subtitle": "投資、ETF 與交易機制",
+      "icon": "📈",
+      "color": "#2a78d6",
+      "public": true,
+      "sources": [
+        { "type": "files", "dir": "Stock" },
+        { "type": "file", "path": "../Wheel輪轉策略.html", "localOnly": true }
+      ]
+    },
+    {
+      "id": "travel",
+      "name": "Travel",
+      "subtitle": "旅遊行程規劃",
+      "icon": "✈️",
+      "color": "#1baf7a",
+      "public": false,
+      "sources": [
+        { "type": "subfolders", "dir": "../旅遊計畫", "entry": "行程規劃.html" }
+      ]
+    }
+  ]
+}

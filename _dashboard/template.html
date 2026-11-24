@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f4f3ef; --surface:#fcfcfb; --surface-2:#f0efea;
+  --text:#0b0b0b; --text-2:#52514e; --muted:#8a8984;
+  --border:#dcdbd6; --grid:#e6e5e0; --accent:#2a78d6; --mark:#fde9a8;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    color-scheme: dark;
+    --bg:#121211; --surface:#1a1a19; --surface-2:#232321;
+    --text:#f0efec; --text-2:#c3c2b7; --muted:#8f8e86;
+    --border:#3a3936; --grid:#2c2c2a; --accent:#3987e5; --mark:#5a4a12;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Noto Sans TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;line-height:1.6;font-size:15px}
+a{color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:24px 20px 60px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 24px;margin-bottom:16px}
+header.top h1{margin:0;font-size:1.7rem;cursor:pointer}
+header.top .sub{color:var(--text-2);font-size:.92rem}
+header.top .gen{margin-left:auto;color:var(--muted);font-size:.8rem;text-align:right}
+.crumb{display:flex;align-items:center;gap:8px;font-size:.92rem;color:var(--text-2);margin:4px 0 12px;flex-wrap:wrap}
+.crumb a{text-decoration:none;color:var(--accent)}
+.crumb a:hover{text-decoration:underline}
+
+/* 查詢列 */
+.query{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin:0 0 18px;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
+.query input[type=search]{flex:1 1 260px;font:inherit;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text)}
+.query label{display:flex;align-items:center;gap:6px;font-size:.86rem;color:var(--text-2)}
+.query select,.query input[type=date]{font:inherit;font-size:.86rem;padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font:inherit;font-size:.8rem;padding:4px 10px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text-2);cursor:pointer}
+.chip:hover{border-color:var(--text-2);color:var(--text)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.qinfo{width:100%;font-size:.82rem;color:var(--muted)}
+
+/* 主題卡片 */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.tcard{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 18px 14px;text-decoration:none;display:flex;flex-direction:column;gap:6px;transition:transform .15s,box-shadow .15s,border-color .15s;overflow:hidden}
+.tcard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--c)}
+.tcard:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.10);border-color:var(--c)}
+.tcard .ic{font-size:2rem;line-height:1}
+.tcard .nm{font-size:1.3rem;font-weight:700}
+.tcard .st{color:var(--text-2);font-size:.9rem}
+.tcard .cnt{display:flex;gap:14px;font-size:.82rem;color:var(--muted);margin-top:2px}
+.tcard .cnt b{color:var(--text);font-size:1rem}
+.tcard ul{margin:6px 0 0;padding:0;list-style:none;font-size:.86rem;color:var(--text-2);border-top:1px solid var(--grid);padding-top:8px}
+.tcard li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:2px 0}
+.tcard li::before{content:"· ";color:var(--c)}
+h2.sec{font-size:1.1rem;margin:28px 0 10px}
+
+/* 文章列表 */
+.list{display:flex;flex-direction:column;gap:10px}
+.item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:grid;grid-template-columns:1fr auto;gap:6px 16px;align-items:start;transition:border-color .15s}
+.item:hover{border-color:var(--c,var(--accent))}
+.item .t{font-size:1.05rem;font-weight:700;text-decoration:none;cursor:pointer}
+.item .t:hover{color:var(--c,var(--accent))}
+.item .n{font-size:.85rem;color:var(--text-2)}
+.item .d{grid-column:1/2;font-size:.88rem;color:var(--text-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.item .m{grid-column:1/2;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.78rem;color:var(--muted)}
+.item .m .tp{color:var(--c);font-weight:600}
+.item .acts{grid-row:1/4;grid-column:2;display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.btn{font:inherit;font-size:.82rem;padding:5px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);text-decoration:none;text-align:center;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--text-2)}
+.btn.pri{background:var(--c,var(--accent));border-color:var(--c,var(--accent));color:#fff}
+mark{background:var(--mark);color:inherit;border-radius:3px;padding:0 1px}
+.pager{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:16px 0 0}
+.pg{font:inherit;font-size:.86rem;min-width:36px;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer}
+.pg:hover:not(:disabled){border-color:var(--text-2)}
+.pg.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.pg:disabled{opacity:.4;cursor:default}
+.pager .gap{color:var(--muted);padding:0 2px}
+.pager .pinfo{margin-left:auto;font-size:.82rem;color:var(--muted)}
+.empty{padding:28px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--border);border-radius:12px}
+
+/* 閱讀模式 */
+.reader{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg);z-index:10}
+.reader .bar{display:flex;align-items:center;gap:12px;padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.reader .bar .tt{font-weight:700;flex:1;min-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.reader iframe{flex:1;width:100%;border:0;background:#fff}
+@media (max-width:700px){.item{grid-template-columns:1fr}.item .acts{grid-row:auto;grid-column:1;flex-direction:row;flex-wrap:wrap}header.top .gen{margin-left:0;text-align:left}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1 id="home">__TITLE__</h1>
+      <div class="sub" id="subtitle"></div>
+    </div>
+    <div class="gen" id="gen"></div>
+  </header>
+  <nav class="crumb" id="crumb"></nav>
+
+  <section class="query" id="query">
+    <input type="search" id="q" placeholder="搜尋標題、摘要、檔名…（按 / 快速聚焦）" autocomplete="off">
+    <label>日期依
+      <select id="field">
+        <option value="updated">更新日期</option>
+        <option value="event">行程／事件日期</option>
+      </select>
+    </label>
+    <label>從 <input type="date" id="from"></label>
+    <label>到 <input type="date" id="to"></label>
+    <div class="chips" id="quick">
+      <button class="chip" data-q="7">近 7 天</button>
+      <button class="chip" data-q="30">近 30 天</button>
+      <button class="chip" data-q="year">今年</button>
+      <button class="chip" data-q="future">未來</button>
+      <button class="chip" data-q="clear">清除條件</button>
+    </div>
+    <label>排序
+      <select id="sort">
+        <option value="desc">日期：新 → 舊</option>
+        <option value="asc">日期：舊 → 新</option>
+        <option value="name">名稱：A → Z</option>
+      </select>
+    </label>
+    <div class="qinfo" id="qinfo"></div>
+  </section>
+
+  <main id="view"></main>
+</div>
+<div id="readerHost"></div>
+
+<script>
+(() => {
+'use strict';
+const DATA = /*__DATA__*/null;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const daysAgo = n => { const d = new Date(); d.setDate(d.getDate()-n); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+
+/* 把主題資訊掛到每篇文章上，方便全域查詢 */
+const ALL = [];
+DATA.topics.forEach(t => t.articles.forEach(a => { a.topic = t; ALL.push(a); }));
+const byPath = new Map(ALL.map(a => [a.path, a]));
+
+$('subtitle').textContent = DATA.subtitle;
+$('gen').innerHTML = `共 ${DATA.topics.length} 個主題、${ALL.length} 篇<br>最後更新：${esc(DATA.generated)}` +
+  (DATA.mode === 'local' ? '（本機版；新增文章後雙擊「更新Dashboard.cmd」）' : '');
+
+/* ---------- 查詢狀態 ---------- */
+const S = { q:'', field:'updated', from:'', to:'', sort: localStorage.getItem('dash.sort') || 'desc' };
+$('sort').value = S.sort;
+const active = () => !!(S.q || S.from || S.to);
+const dateOf = a => S.field === 'event' ? (a.eventDate || '') : a.updated;
+
+function hl(text) {
+  const t = esc(text);
+  if (!S.q) return t;
+  const words = S.q.split(/\s+/).filter(Boolean).map(w => esc(w).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return words.length ? t.replace(new RegExp(`(${words.join('|')})`, 'gi'), '<mark>$1</mark>') : t;
+}
+function query(list) {
+  const words = S.q.toLowerCase().split(/\s+/).filter(Boolean);
+  let r = list.filter(a => {
+    if (words.length) {
+      const hay = `${a.title} ${a.note} ${a.desc} ${a.path} ${a.topic.name}`.toLowerCase();
+      if (!words.every(w => hay.includes(w))) return false;
+    }
+    if (S.from || S.to) {
+      const d = dateOf(a);
+      if (!d) return false;
+      if (S.from && d < S.from) return false;
+      if (S.to && d > S.to) return false;
+    }
+    return true;
+  });
+  const key = a => dateOf(a) || (S.sort === 'asc' ? '9999' : '0000');
+  if (S.sort === 'name') r.sort((a, b) => a.title.localeCompare(b.title, 'zh-Hant'));
+  else r.sort((a, b) => S.sort === 'asc' ? key(a).localeCompare(key(b)) : key(b).localeCompare(key(a)));
+  return r;
+}
+function describeQuery(n, scope) {
+  if (!active() && S.sort === 'desc') return '';
+  const parts = [];
+  if (S.q) parts.push(`關鍵字「${esc(S.q)}」`);
+  if (S.from || S.to) parts.push(`${S.field === 'event' ? '行程／事件日期' : '更新日期'} ${S.from || '…'} ～ ${S.to || '…'}`);
+  const sortTxt = { desc:'日期新→舊', asc:'日期舊→新', name:'名稱' }[S.sort];
+  return `${scope}${parts.length ? '：' + parts.join('、') : ''}，共 <b>${n}</b> 篇，依${sortTxt}排序。`;
+}
+
+/* ---------- 畫面 ---------- */
+function itemHtml(a, showTopic) {
+  const m = [];
+  if (showTopic) m.push(`<span class="tp">${esc(a.topic.icon)} ${esc(a.topic.name)}</span>`);
+  if (a.eventDate) m.push(`<span>📅 行程 ${a.eventDate}</span>`);
+  m.push(`<span>🕒 更新 ${a.updated}</span>`);
+  if (a.sections) m.push(`<span>📑 ${a.sections} 個章節</span>`);
+  m.push(`<span title="${esc(a.path)}">📄 ${esc(a.path.split('/').slice(-2).join('/'))}</span>`);
+  const alts = a.alts.map(x => `<a class="btn" href="${x.href}" target="_blank" rel="noopener">${esc(x.label)}</a>`).join('');
+  return `<article class="item" style="--c:${a.topic.color}">
+    <div><a class="t" href="#/r/${encodeURIComponent(a.path)}">${hl(a.title)}</a>${a.note && a.note !== a.title ? `<div class="n">${hl(a.note)}</div>` : ''}</div>
+    ${a.desc ? `<div class="d">${hl(a.desc)}</div>` : ''}
+    <div class="m">${m.join('')}</div>
+    <div class="acts"><a class="btn pri" href="#/r/${encodeURIComponent(a.path)}">閱讀</a><a class="btn" href="${a.href}" target="_blank" rel="noopener">新分頁</a>${alts}</div>
+  </article>`;
+}
+const listHtml = (arr, showTopic) => arr.length ? `<div class="list">${arr.map(a => itemHtml(a, showTopic)).join('')}</div>` : `<div class="empty">沒有符合條件的文章。試試放寬日期範圍，或按「清除條件」。</div>`;
+
+/* 分頁：每頁 PER 筆 */
+const PER = 10;
+let page = 1;
+function pagedHtml(arr, showTopic) {
+  if (!arr.length) return listHtml(arr, showTopic);
+  const pages = Math.ceil(arr.length / PER);
+  page = Math.min(Math.max(1, page), pages);
+  const start = (page - 1) * PER, slice = arr.slice(start, start + PER);
+  let pager = '';
+  if (pages > 1) {
+    const nums = [];
+    for (let p = 1; p <= pages; p++) {
+      if (p === 1 || p === pages || Math.abs(p - page) <= 2) nums.push(p);
+      else if (nums[nums.length - 1] !== '…') nums.push('…');
+    }
+    pager = `<nav class="pager">
+      <button class="pg" data-p="${page - 1}" ${page === 1 ? 'disabled' : ''}>‹ 上一頁</button>
+      ${nums.map(p => p === '…' ? '<span class="gap">…</span>' : `<button class="pg${p === page ? ' on' : ''}" data-p="${p}">${p}</button>`).join('')}
+      <button class="pg" data-p="${page + 1}" ${page === pages ? 'disabled' : ''}>下一頁 ›</button>
+      <span class="pinfo">第 ${start + 1}–${start + slice.length} 筆，共 ${arr.length} 筆</span>
+    </nav>`;
+  }
+  return listHtml(slice, showTopic) + pager;
+}
+
+function renderHome() {
+  $('crumb').innerHTML = '';
+  if (active()) {
+    const r = query(ALL);
+    $('qinfo').innerHTML = describeQuery(r.length, '全部主題');
+    $('view').innerHTML = `<h2 class="sec">查詢結果</h2>` + pagedHtml(r, true);
+    return;
+  }
+  $('qinfo').innerHTML = '';
+  const cards = DATA.topics.map(t => {
+    const latest = t.articles.slice().sort((a, b) => b.mtime - a.mtime);
+    return `<a class="tcard" href="#/t/${t.id}" style="--c:${t.color}">
+      <div class="ic">${esc(t.icon)}</div>
+      <div class="nm">${esc(t.name)}</div>
+      <div class="st">${esc(t.subtitle)}</div>
+      <div class="cnt"><span><b>${t.articles.length}</b> 篇</span>${latest[0] ? `<span>最近更新 ${latest[0].updated}</span>` : ''}</div>
+      ${latest.length ? `<ul>${latest.slice(0, 3).map(a => `<li>${esc(a.title)}</li>`).join('')}</ul>` : ''}
+    </a>`;
+  }).join('');
+  const recent = query(ALL).slice(0, 6);
+  $('view').innerHTML = `<div class="grid">${cards}</div><h2 class="sec">${S.sort === 'name' ? '全部文章（依名稱）' : S.sort === 'asc' ? '最早的文章' : '最近更新'}</h2>` + listHtml(recent, true);
+}
+
+function renderTopic(t) {
+  $('crumb').innerHTML = `<a href="#/">🏠 全部主題</a> › <span>${esc(t.icon)} ${esc(t.name)}</span>`;
+  const r = query(t.articles);
+  $('qinfo').innerHTML = describeQuery(r.length, `${esc(t.icon)} ${esc(t.name)}`) || `${esc(t.icon)} ${esc(t.name)} 共 <b>${t.articles.length}</b> 篇。`;
+  $('view').innerHTML = `<h2 class="sec" style="margin-top:6px">${esc(t.icon)} ${esc(t.name)} <span style="font-weight:400;color:var(--muted);font-size:.9rem">${esc(t.subtitle)}</span></h2>` + pagedHtml(r, false);
+}
+
+function renderReader(a) {
+  const back = `#/t/${a.topic.id}`;
+  const alts = a.alts.map(x => `<a class="btn" href="${x.href}" target="_blank" rel="noopener">${esc(x.label)}</a>`).join('');
+  $('readerHost').innerHTML = `<div class="reader" style="--c:${a.topic.color}">
+    <div class="bar">
+      <a class="btn" href="${back}">← 返回 ${esc(a.topic.icon)} ${esc(a.topic.name)}</a>
+      <div class="tt" title="${esc(a.title)}">${esc(a.title)}</div>
+      ${alts}<a class="btn pri" href="${a.href}" target="_blank" rel="noopener">在新分頁開啟</a>
+    </div>
+    <iframe src="${a.href}" title="${esc(a.title)}"></iframe>
+  </div>`;
+  document.title = `${a.title} — ${DATA.title}`;
+}
+
+/* ---------- 路由 ---------- */
+let lastList = null;
+function route() {
+  const h = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
+  if (!h.startsWith('r/')) { if (h !== lastList) page = 1; lastList = h; }   // 換主題才回到第 1 頁；從閱讀返回保留頁數
+  if (!h.startsWith('r/')) { $('readerHost').innerHTML = ''; document.title = DATA.title; }
+  if (h.startsWith('r/')) {
+    const a = byPath.get(h.slice(2));
+    if (a) return renderReader(a);
+    location.hash = '#/'; return;
+  }
+  if (h.startsWith('t/')) {
+    const t = DATA.topics.find(x => x.id === h.slice(2));
+    if (t) return renderTopic(t);
+  }
+  renderHome();
+}
+const rerender = (keepPage) => { if (!keepPage) page = 1; if (!location.hash.startsWith('#/r/')) route(); };
+$('view').addEventListener('click', e => {
+  const b = e.target.closest('.pg'); if (!b || b.disabled) return;
+  page = +b.dataset.p; rerender(true);
+  $('query').scrollIntoView({ block: 'start' });
+});
+
+/* ---------- 事件 ---------- */
+$('home').onclick = () => { location.hash = '#/'; };
+$('q').addEventListener('input', e => { S.q = e.target.value.trim(); rerender(); });
+$('field').onchange = e => { S.field = e.target.value; rerender(); };
+$('from').onchange = e => { S.from = e.target.value; markQuick(''); rerender(); };
+$('to').onchange = e => { S.to = e.target.value; markQuick(''); rerender(); };
+$('sort').onchange = e => { S.sort = e.target.value; localStorage.setItem('dash.sort', S.sort); rerender(); };
+function markQuick(k) { document.querySelectorAll('#quick .chip').forEach(c => c.classList.toggle('on', c.dataset.q === k)); }
+document.querySelectorAll('#quick .chip').forEach(c => c.onclick = () => {
+  const k = c.dataset.q;
+  if (k === 'clear') { S.q = S.from = S.to = ''; $('q').value = ''; markQuick(''); }
+  else if (k === 'year') { S.from = `${new Date().getFullYear()}-01-01`; S.to = `${new Date().getFullYear()}-12-31`; markQuick(k); }
+  else if (k === 'future') { S.field = 'event'; $('field').value = 'event'; S.from = today(); S.to = ''; markQuick(k); }
+  else { S.from = daysAgo(+k); S.to = today(); markQuick(k); }
+  $('from').value = S.from; $('to').value = S.to;
+  rerender();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); $('q').focus(); }
+  if (e.key === 'Escape' && location.hash.startsWith('#/r/')) history.back();
+});
+window.addEventListener('hashchange', route);
+route();
+})();
+</script>
+</body>
+</html>
