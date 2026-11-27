@@ -26,6 +26,17 @@
       ]
     },
     {
+      "id": "lab",
+      "name": "Lab",
+      "subtitle": "互動作品與小實驗",
+      "icon": "🧪",
+      "color": "#a24be0",
+      "public": true,
+      "sources": [
+        { "type": "subfolders", "dir": "Lab", "entry": "index.html" }
+      ]
+    },
+    {
       "id": "travel",
       "name": "Travel",
       "subtitle": "旅遊行程規劃",

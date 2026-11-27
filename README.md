@@ -7,6 +7,7 @@
 ```
 knowledge-hub/
 ├─ Stock/                  公開主題：投資、ETF 與交易機制（一篇一個 HTML）
+├─ Lab/                    公開主題：互動作品（一個子資料夾一個作品，入口 index.html）
 ├─ _dashboard/
 │  ├─ topics.json          主題設定（名稱、圖示、來源資料夾、是否公開）
 │  ├─ template.html        dashboard 版型
