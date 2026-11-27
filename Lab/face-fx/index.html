@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FaceFX 手勢變臉</title>
+<meta name="description" content="對著鏡頭比手勢，臉就變成貓、狗、卡通大眼或戴上假面舞會面具，還能星空去背、指尖噴粒子。MediaPipe 追蹤臉和手，WebGPU 畫濾鏡與 16 萬顆粒子，全部在瀏覽器裡跑、影像不上傳；沒有相機也能看示範模式。">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo">✨</span> FaceFX <small>手勢變臉魔法</small></div>
+    <div class="stats"><span id="status">尚未啟動</span><span id="fps"></span></div>
+    <div class="tools">
+      <button id="btnSkeleton" title="顯示手部骨架 (H)">🖐 骨架</button>
+      <button id="btnSnap" title="拍照 (S)">📸 拍照</button>
+    </div>
+  </header>
+
+  <main id="stageWrap">
+    <div id="stage">
+      <canvas id="gpuCanvas"></canvas>
+      <canvas id="overlay"></canvas>
+      <div id="toast"></div>
+    </div>
+
+    <div id="startCard" class="card">
+      <h1>✨ FaceFX</h1>
+      <p>對著鏡頭比手勢，臉就會變身。全部在瀏覽器裡跑：MediaPipe 追蹤臉和手，WebGPU 畫濾鏡和粒子，畫面不會上傳到任何地方。</p>
+      <div class="legend-big">
+        <div><b>✌️</b>貓咪</div>
+        <div><b>👍</b>小狗</div>
+        <div><b>🖐</b>卡通大眼</div>
+        <div><b>✊</b>假面舞會</div>
+        <div><b>🤟</b>星空去背</div>
+        <div><b>☝️</b>指尖魔法</div>
+        <div><b>👎</b>全部清除</div>
+      </div>
+      <div class="actions">
+        <button id="btnStart" class="primary">📷 開啟相機</button>
+        <button id="btnDemo">🎬 示範模式（不用相機）</button>
+      </div>
+      <p class="hint">第一次會下載約 15 MB 的模型。手勢要維持約半秒才會切換。</p>
+    </div>
+  </main>
+
+  <footer id="legend">
+    <button data-mode="cat"><b>✌️</b>貓咪<kbd>1</kbd></button>
+    <button data-mode="dog"><b>👍</b>小狗<kbd>2</kbd></button>
+    <button data-mode="toon"><b>🖐</b>卡通<kbd>3</kbd></button>
+    <button data-mode="mask"><b>✊</b>面具<kbd>4</kbd></button>
+    <button data-toggle="bg"><b>🤟</b>星空去背<kbd>B</kbd></button>
+    <button data-toggle="magic"><b>☝️</b>指尖魔法<kbd>P</kbd></button>
+    <button data-mode="none"><b>👎</b>清除<kbd>0</kbd></button>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

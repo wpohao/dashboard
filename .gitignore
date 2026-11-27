@@ -1,5 +1,5 @@
 # 由 _dashboard/build.js 產生；公開版在 GitHub Actions 上重新產生
-index.html
+/index.html
 
 # 工具暫存
 .playwright-mcp/
