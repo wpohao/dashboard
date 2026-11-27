@@ -33,7 +33,63 @@
       "color": "#a24be0",
       "public": true,
       "sources": [
-        { "type": "subfolders", "dir": "Lab", "entry": "index.html" }
+        { "type": "subfolders", "dir": "Lab", "entry": "index.html" },
+        {
+          "type": "link",
+          "url": "https://wpohao.github.io/castle-life/",
+          "title": "城堡生活",
+          "desc": "在瀏覽器裡用 WebGPU 跑的 3D 中世紀城鎮生活遊戲：逛市集買武器買馬、騎馬逛城、上競技場比試，再到城主府送禮培養感情，最後求婚、結婚。",
+          "added": "2026-11-24"
+        },
+        {
+          "type": "link",
+          "url": "https://wpohao.github.io/forge/",
+          "title": "Forge 異世界鍛造作品集",
+          "desc": "浮在空中的異世界魔法鍛造屋：點門進屋，再點熔爐、附魔兵器架、公會委託板等物件，看經歷與技能卡片。Three.js 程序化建模，可切換中英文。",
+          "added": "2026-11-20"
+        },
+        {
+          "type": "link",
+          "url": "https://wpohao.github.io/polish-word-game/",
+          "title": "波蘭文旅遊練習",
+          "desc": "給波蘭文新手的旅遊情境小遊戲：先翻牌配對認關鍵字，再進情境對話選出最自然的回答。7 個情境、56 張卡、42 題對話，附四語對照與發音，可加到手機主畫面、離線也能玩。",
+          "added": "2026-11-20"
+        },
+        {
+          "type": "link",
+          "url": "https://bucolic-dieffenbachia-ad4a7d.netlify.app/",
+          "title": "Daily All 今日晨報",
+          "desc": "每天批次產出的晨報與學習文章：英文、健康、波蘭文、歷史上的今天、數據圖等多條產線，每日更新，舊文自動歸檔。",
+          "added": "2026-11-27"
+        },
+        {
+          "type": "link",
+          "url": "https://wpohao.github.io/Copilot/",
+          "title": "待辦清單",
+          "desc": "純前端待辦清單：新增事項、依未完成／已完成篩選、一鍵清除已完成，支援深色模式。用 GitHub Copilot 練習專案做的。",
+          "added": "2026-10-31"
+        },
+        {
+          "type": "link",
+          "url": "https://wpohao.github.io/daily_meal/",
+          "title": "每日午餐轉盤",
+          "desc": "決定今天中午吃什麼的網頁轉盤：輸入店家、按下開始，機率完全平均分配。純靜態頁面，可加到手機主畫面。",
+          "added": "2026-08-31"
+        },
+        {
+          "type": "link",
+          "url": "https://wpohao.github.io/CG/",
+          "title": "Computer Graphics 課程作業",
+          "desc": "電腦圖學課程的作業集（hw1～hw6），2017～2018 年。",
+          "added": "2018-01-04"
+        },
+        {
+          "type": "link",
+          "url": "https://wpohao.github.io/W3D/",
+          "title": "Web3D 課程作業",
+          "desc": "Web3D 課程的作業集（2017 春季，hw1～hw6）。",
+          "added": "2017-06-22"
+        }
       ]
     },
     {
